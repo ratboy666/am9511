@@ -32,19 +32,25 @@ void fp_dump(struct fp *f) {
  *
  * note msb comes first in am9511 when reading stack.
  */
-unsigned char am9511_pi[] = { /* am9511 pi */
+unsigned char am9511_pi[] = {     /* am9511 pi */
     0xda, 0x0f, 0xc9, 0x02
 };
-unsigned char am9511_5[] = {  /* am9511 5.0 */
+unsigned char am9511_5[] = {      /* am9511 5.0 */
     0x00, 0x00, 0xa0, 0x03
 };
-unsigned char ieee_m5[] = {   /* ieee -5.0 */
+unsigned char am9511_p1[] = {     /* am9511 0.1 */
+    0xcd, 0xcc, 0xcc, 0x7d
+};
+unsigned char am9511_mp0006[] = { /* am9511 -0.0006 */
+    0x51, 0x49, 0x9d, 0xf6
+};
+unsigned char ieee_m5[] = {       /* ieee -5.0 */
     0x00, 0x00, 0xa0, 0xc0 
 };
-unsigned char ms_m1p5[] = {   /* microsoft -1.5 */
+unsigned char ms_m1p5[] = {       /* microsoft -1.5 */
     0x00, 0x00, 0xc0, 0x81
 };
-unsigned char hi_p1[] = {     /* hitech 0.1 */
+unsigned char hi_p1[] = {         /* hitech 0.1 */
     0xcd, 0xcc, 0xcc, 0x3d
 };
 
@@ -76,27 +82,37 @@ int main(int ac, char **av) {
 
     am_fp(f, am9511_pi);
     fp_target(&x, f);
-    printf("am9511 pi: %10g\n", x);
+    printf("am9511      pi: %10g\n", x);
     fp_dump(f);
 
     am_fp(f, am9511_5);
     fp_target(&x, f);
-    printf("am9511  5: %10g\n", x);
+    printf("am9511       5: %10g\n", x);
+    fp_dump(f);
+
+    am_fp(f, am9511_p1); // exp=0x40
+    fp_target(&x, f);
+    printf("am9511     0.1: %10g\n", x);
+    fp_dump(f);
+
+    am_fp(f, am9511_mp0006); // exp = 0xc0
+    fp_target(&x, f);
+    printf("am9511 -0.0006: %10g\n", x);
     fp_dump(f);
 
     ie_fp(f, ieee_m5);
     fp_target(&x, f);
-    printf("ieee   -5: %10g\n", x);
+    printf("ieee        -5: %10g\n", x);
     fp_dump(f);
 
     hi_fp(f, hi_p1);
     fp_target(&x, f);
-    printf("hi    0.1: %10g\n", x);
+    printf("hi         0.1: %10g\n", x);
     fp_dump(f);
 
     ms_fp(f, ms_m1p5);
     fp_target(&x, f);
-    printf("ms   -1.5: %10g\n", x);
+    printf("ms        -1.5: %10g\n", x);
     fp_dump(f);
 
     return 0;
