@@ -33,27 +33,21 @@
 #define FP_OK   0
 #define FP_ERR  1
 
-/* Incomplete struct for data hiding.
- */
-struct fp;
-
-int ie_fp(struct fp *, void *);
-int fp_ie(void *, struct fp *);
-int hi_fp(struct fp *, void *);
-int fp_hi(void *, struct fp *);
-int ms_fp(struct fp *, void *);
-int fp_ms(void *, struct fp *);
-int am_fp(struct fp *, void *);
-int fp_am(void *, struct fp *);
-
-size_t fp_size(void);
-void fp_get(struct fp *, unsigned char *sign,
-		         int *exponent,
-			 unsigned char *mantissa_h,
-			 unsigned int *mantissa_l);
-void fp_put(struct fp *, unsigned char sign,
-		         int exponent,
-			 unsigned char mantissa_h,
-			 unsigned int mantissa_l);
+int ie_fp(void *);
+int fp_ie(void *);
+int hi_fp(void *);
+int fp_hi(void *);
+int ms_fp(void *);
+int fp_ms(void *);
+int am_fp(void *);
+int fp_am(void *);
+void fp_get(unsigned char *sign,
+	    int *exponent,
+	    unsigned char *mantissa_h,
+	    unsigned int *mantissa_l);
+void fp_put(unsigned char sign,
+	    int exponent,
+	    unsigned char mantissa_h,
+	    unsigned int mantissa_l);
 
 #endif

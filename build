@@ -1,0 +1,62 @@
+# build
+#
+# Build am9511 emulator
+#
+# testhw.c is a dummy source file -- so we can use the HI-TECH C
+# driver to generate testhw.com easily. I cannot get zxlink to work
+# (probably my bad), and -oname is not setting the output name
+# for the c.com driver. So, we create 0 length testhw.c and compile
+# that to provide the needed name.
+#
+# For the hardware version, we do not need ova (integer overflow
+# math) or the am9511 front end or floating emulation. This is
+# all done by the am9511 chip, through hw9511. We *do* need floatcnv
+# to be able to make sense of the results of the chip.
+#
+# For the software version (test.com, vs the hardware testhw.com),
+# we use ova for integer math, am9511 for command interpretation.
+#
+# The main routine test.c is used for both hardware and emulation.
+# This is the test driver for the emulation and the chip.
+#
+# Choose the appropriate build sequence. gcc or zxc. gcc is the
+# actual target, because this code is to be incorporated into 8080/
+# Z80 emulators to provide AM9511 chip emulation.
+#
+# NOTE: Our initial target is AM9511 emulation and *not* AM9512 emulation.
+#       AM9511 offers more functions, and 16 and 32 bit integer operations.
+#       This can more easily enhance typical programs running on the
+#       8080/Z80 platform. 16 bit add and subtract are not interesting --
+#       multiply and divide are. As are the 32 bit (double) operations.
+#
+# WHY:  The AM9511 can deliver a floating point divide in 165.9
+#       2Mhz 8080 cycles. 41 register instructions. Compare to LLLBASIC
+#       at 13079.6 cycles, this is 78.8 times faster.
+#
+#       We are going to incorporate am9511 into RunCPM for testing.
+#       We will see if we can get a floating point divide in the
+#       space of 41 instructions. When we get this, we are pretty
+#       much complete, and can submit for inclusion into z80pack
+#       and altair-duino.
+
+if false; then
+  gcc -c hw9511.c
+  gcc test.c getopt.c am9511.c floatcnv.c ova.c
+fi
+
+if true; then
+  # build for z80 using zxcc
+  #
+  zxc -c -o hw9511.c
+  zxc -c -o getopt.c
+  zxc -c -o am9511.c
+  zxc -c -o floatcnv.c
+  zxc -c -o ova.c
+  rm testhw.c
+  touch testhw.c
+  zxc -c -o testhw.c
+  zxc -c -o test.c
+  zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
+  zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
+  zxc cnvtest.c floatcnv.obj -LF
+fi

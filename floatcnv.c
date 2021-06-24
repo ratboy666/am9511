@@ -5,9 +5,9 @@
  * We are able to convert data to and from different floating point
  * formats.
  *
- * The conversion code uses an intermediate format "fp".
- * "fp" is not a superset of the formats, because it does not implement
- * IEEE NAN or denormalized numbers.
+ * The conversion code uses an intermediate format "fp". "fp" is not a
+ * superset of the formats, because it does not implement IEEE NAN or
+ * denormalized numbers.
  *
  * Formats:
  *
@@ -19,20 +19,23 @@
  *     ie     IEEE 32 bit (Turbo Modula 2 REAL, gcc float)
  *
  * Compile and test with GCC, TCC and HI-TECH C. Floating point conversion
- * code is of use on the 8080 platform to prepare input for the AM9511.
- * We add tcc to the "compiler mix" to ensure portability of the code.
+ * code is of use on the z80 platform to prepare input for the AM9511.
  *
  * Function naming conventions:
  *
  * As a matter of interest, since the conversion code is targetted to
  * z80 native, possibly using Microsoft REL format, identifiers are kept
- * to 6 characters signifance. Since Hi-Tech C prepends an '_' to names,
+ * to 6 characters significance. Since Hi-Tech C prepends an '_' to names,
  * this only gives us 5 characters. Therefore, Microsoft 32 to internal is
  * ms_fp(), and internal to AM9511 is fp_am().
  */
 
+
 #include <stddef.h>
+
 #include "floatcnv.h"
+#include "types.h"
+
 
 /* I0..I3 support endian systems other than little endian. Unfortunately,
  * I do not have access to big endian systems anymore.
@@ -42,39 +45,10 @@
 #define I2 2
 #define I3 3 /* most significant byte */
 
-#ifdef __TINYC__
-
-/* Types for TCC, Linux, 64 bit
- */
-typedef unsigned short uint16;
-typedef unsigned char  uint8;
-typedef short          int16;
-
-#endif
-
-#ifdef __GNUC__
-
-/* Types for GNUC, Linux, 64 bit
- */
-typedef unsigned short uint16;
-typedef unsigned char  uint8;
-typedef short          int16;
-
-#endif
-
-#ifdef z80
-
-/* Types for Hi-Tech C, z80, 8 bit
- */
-typedef unsigned int   uint16;
-typedef unsigned char  uint8;
-typedef int            int16;
-
-#endif
 
 /* Internal floating point representation, separate sign, normalized 24 bit
  * mantissa with explicit high "1" bit.
- * If mantissa == 0, value is 0.0.
+ * If mantissa high bit == 0, value is 0.0.
  * Exponent is not biased.
  * Separate sign (1 = negative, 0 = positive)
  */
@@ -85,18 +59,23 @@ struct fp {
     int16  exponent;
 };
 
-/* memset() is broken with hi-tech C. Also we may have issues with
- * long shifts. The memset() issue prompts us to write and use clear()
- * instead. We avoid long (32 bit) values to avoid linking in library
- * routines on the z80. We are limiting ourselves to 8 and 16 bit
- * operations. "register" declarations will be added... by examining
- * z80 assembler output...
+
+/* Temporary fp, use fp_put()/fp_get to save/restore if needed.
+ */
+static struct fp fptmp = { 0, };
+
+/* memset() is broken with HI-TECH C.
+ * The memset() issue prompts us to write and use clear() instead. We avoid
+ * ong (32 bit) values to avoid linking in library routines on the z80. We
+ * are limiting ourselves to 8 and 16 bit operations. "register" declarations
+ * will be added... by examining z80 assembler output...
  */
 static void clear(void *p, int n) {
     unsigned char *cp = p;
     while (n--)
         *cp++ = 0;
 }
+
 
 /* Convert IEEE to FP format.
  *
@@ -108,7 +87,7 @@ static void clear(void *p, int n) {
  * assuming that the IEEE float occupies 4 bytes of contiguous memory,
  * starting with pointer p.
  */
-int ie_fp(struct fp *f, void *p) {
+int ie_fp(void *p) {
     unsigned char *ieee = p;
     int16 e;
     uint16 m_l;
@@ -116,7 +95,7 @@ int ie_fp(struct fp *f, void *p) {
 
     /* Clear destination
      */
-    clear(f, sizeof(*f));
+    clear(&fptmp, sizeof(fptmp));
 
     /* Extract exponent. 7 bits from I2, bit from I3.
      */
@@ -153,17 +132,18 @@ int ie_fp(struct fp *f, void *p) {
 
     /* Save into fp.
      */
-    f->exponent = e;
-    f->sign = s;
-    f->mantissa_h = m_h;
-    f->mantissa_l = m_l;
+    fptmp.exponent = e;
+    fptmp.sign = s;
+    fptmp.mantissa_h = m_h;
+    fptmp.mantissa_l = m_l;
 
     return FP_OK;
 }
 
+
 /* Convert FP to IEEE format.
  */
-int fp_ie(void *p, struct fp *f) {
+int fp_ie(void *p) {
     unsigned char *ieee = p;
     int16 e;
     uint16 m_l;
@@ -171,10 +151,10 @@ int fp_ie(void *p, struct fp *f) {
 
     /* Get from fp.
      */
-    e = f->exponent;
-    m_h = f->mantissa_h;
-    m_l = f->mantissa_l;
-    s = f->sign;
+    e = fptmp.exponent;
+    m_h = fptmp.mantissa_h;
+    m_l = fptmp.mantissa_l;
+    s = fptmp.sign;
 
     /* Clear destination.
      */
@@ -221,9 +201,10 @@ int fp_ie(void *p, struct fp *f) {
     return FP_OK;
 }
 
+
 /* Convert HITECH to FP format.
  */
-int hi_fp(struct fp *f, void *p) {
+int hi_fp(void *p) {
     unsigned char *hitech = p;
     int16 e;
     uint16 m_l;
@@ -231,7 +212,7 @@ int hi_fp(struct fp *f, void *p) {
 
     /* Clear destination
      */
-    clear(f, sizeof(*f));
+    clear(&fptmp, sizeof(fptmp));
 
     /* If bit 23 is zero, must be zero (or not normalized).
      */
@@ -256,28 +237,29 @@ int hi_fp(struct fp *f, void *p) {
 
     /* Put into fp.
      */
-    f->sign = s;
-    f->exponent = e;
-    f->mantissa_l = m_l;
-    f->mantissa_h = m_h;
+    fptmp.sign = s;
+    fptmp.exponent = e;
+    fptmp.mantissa_l = m_l;
+    fptmp.mantissa_h = m_h;
 
     return FP_OK;
 }
 
+
 /* Convert FP to HITECH format.
  */
-int fp_hi(void *p, struct fp *f) {
+int fp_hi(void *p) {
     unsigned char *hitech = p;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
-    /* Get from f.
+    /* Get from fp.
      */
-    e = f->exponent;
-    m_l = f->mantissa_l;
-    m_h = f->mantissa_h;
-    s = f->sign;
+    e = fptmp.exponent;
+    m_l = fptmp.mantissa_l;
+    m_h = fptmp.mantissa_h;
+    s = fptmp.sign;
 
     /* Clear destination.
      */
@@ -315,9 +297,10 @@ int fp_hi(void *p, struct fp *f) {
     return FP_OK;
 }
 
+
 /* Convert MS to FP format.
  */
-int ms_fp(struct fp *f, void *p) {
+int ms_fp(void *p) {
     unsigned char *ms = p;
     int16 e;
     uint16 m_l;
@@ -325,7 +308,7 @@ int ms_fp(struct fp *f, void *p) {
 
     /* Clear destination
      */
-    clear(f, sizeof(*f));
+    clear(&fptmp, sizeof(fptmp));
 
     /* If exponent is zero, must be zero.
      */
@@ -349,17 +332,18 @@ int ms_fp(struct fp *f, void *p) {
 
     /* Put into fp.
      */
-    f->sign = s;
-    f->exponent = e;
-    f->mantissa_l = m_l;
-    f->mantissa_h = m_h;
+    fptmp.sign = s;
+    fptmp.exponent = e;
+    fptmp.mantissa_l = m_l;
+    fptmp.mantissa_h = m_h;
 
     return FP_OK;
 }
 
+
 /* Convert FP to MS format.
  */
-int fp_ms(void *p, struct fp *f) {
+int fp_ms(void *p) {
     unsigned char *ms = p;
     int16 e;
     uint16 m_l;
@@ -367,10 +351,10 @@ int fp_ms(void *p, struct fp *f) {
 
     /* Get from fp.
      */
-    e = f->exponent;
-    m_l = f->mantissa_l;
-    m_h = f->mantissa_h;
-    s = f->sign;
+    e = fptmp.exponent;
+    m_l = fptmp.mantissa_l;
+    m_h = fptmp.mantissa_h;
+    s = fptmp.sign;
 
     /* Clear destination.
      */
@@ -408,9 +392,10 @@ int fp_ms(void *p, struct fp *f) {
     return FP_OK;
 }
 
+
 /* Convert AM9511 to FP format.
  */
-int am_fp(struct fp *f, void *p) {
+int am_fp(void *p) {
     unsigned char *am9511 = p;
     int16 e;
     uint16 m_l;
@@ -418,7 +403,7 @@ int am_fp(struct fp *f, void *p) {
 
     /* Clear destination
      */
-    clear(f, sizeof(*f));
+    clear(&fptmp, sizeof(fptmp));
 
     /* If bit 23 is low, must be zero. AM9511 format is
      * normalized, but the leading '1' bit is explicit.
@@ -453,15 +438,16 @@ int am_fp(struct fp *f, void *p) {
 
     /* Fill in fp.
      */
-    f->sign = s;
-    f->exponent = e;
-    f->mantissa_h = m_h;
-    f->mantissa_l = m_l;
+    fptmp.sign = s;
+    fptmp.exponent = e;
+    fptmp.mantissa_h = m_h;
+    fptmp.mantissa_l = m_l;
 
     return FP_OK;
 }
 
-int fp_am(void *p, struct fp *f) {
+
+int fp_am(void *p) {
     unsigned char *am9511 = p;
     int16 e;
     uint16 m_l;
@@ -469,10 +455,10 @@ int fp_am(void *p, struct fp *f) {
 
     /* Get from fp.
      */
-    e = f->exponent;
-    m_l = f->mantissa_l;
-    m_h = f->mantissa_h;
-    s = f->sign;
+    e = fptmp.exponent;
+    m_l = fptmp.mantissa_l;
+    m_h = fptmp.mantissa_h;
+    s = fptmp.sign;
 
     /* Clear destination.
      */
@@ -510,42 +496,44 @@ int fp_am(void *p, struct fp *f) {
     return FP_OK;
 }
 
-/* Return size of fp.
- */
-size_t fp_size(void) {
-    return sizeof(struct fp);
-}
 
 /* fp field getter. Note that the type of mantissa_l is wrong a lot of the
- * time. int is 32 bit with gcc. The type of exponent is also wrong.
+ * time. int is 32 bit with gcc, not 16 bit. The type of exponent is also
+ * wrong. Just be careful to respect the limits of the fp struct when
+ * using  fp_get()/fp_put():
  *
- * Be careful when using fp_get()/fp_put().
+ *     sign is 0 or 1
+ *     exponent is -127..128
+ *     mantissa_h is 128..255 (high bit is '1', mantissa always normalized)
+ *     mantissa_l is 0..65535
  *
- * sign is 0 or 1
- * exponent is -127..128
- * mantissa_h is 128..255 (high bit is '1', mantissa normalized)
- * mantissa_l is 0..65535
+ *     if (mantissa_h & 0x80) == 0, value is 0.0. This is because the
+ *     high bit of the mantissa is explicit. This gives us a fast 0
+ *     test.
  *
- * if (mantissa_h & 0x80) == 0, value is 0.0
+ * And, as an important note: the value of fptmp is not saved -- to make
+ * this code re-entrant, fptmp must be saved and restored. fp_get() and
+ * fp_put() is the way to do this. The reason for this madness is that
+ * we want to get good code, because this may be run on the Z80.
  */
-void fp_get(struct fp *f, unsigned char *sign,
-		          int *exponent,
-			  unsigned char *mantissa_h,
-			  unsigned int *mantissa_l) {
-    *sign = f->sign;
-    *exponent = f->exponent;
-    *mantissa_h = f->mantissa_h;
-    *mantissa_l = f->mantissa_l;
+void fp_get(unsigned char *sign,
+	    int *exponent,
+	    unsigned char *mantissa_h,
+	    unsigned int *mantissa_l) {
+    *sign = fptmp.sign;
+    *exponent = fptmp.exponent;
+    *mantissa_h = fptmp.mantissa_h;
+    *mantissa_l = fptmp.mantissa_l;
 }
 
 /* Put into fp.
  */
-void fp_put(struct fp *f, unsigned char sign,
-		          int exponent,
-			  unsigned char mantissa_h,
-			  unsigned int mantissa_l) {
-    f->sign = sign;
-    f->exponent = exponent;
-    f->mantissa_h = mantissa_h;
-    f->mantissa_l = mantissa_l;
+void fp_put(unsigned char sign,
+	    int exponent,
+	    unsigned char mantissa_h,
+	    unsigned int mantissa_l) {
+    fptmp.sign = sign;
+    fptmp.exponent = exponent;
+    fptmp.mantissa_h = mantissa_h;
+    fptmp.mantissa_l = mantissa_l;
 }
