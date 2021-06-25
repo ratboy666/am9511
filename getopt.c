@@ -32,12 +32,14 @@
  */
 
 /* HITECH C does not have index() or rindex() so we replace these with
- * strchr() and strrchr(), which it does support. HITECH C does not
+ * strchr() and strrchr(), which it does support.
  * support const
  */
+
+#include <ansi.h>
+
 #define index(s,c) strchr(s,c)
 #define rindex(s,c) strrchr(s,c)
-#define const
 
 /* Just make sure that sccsid is completely gone when using HITECH C -
  * because every byte is precious.

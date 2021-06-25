@@ -4,11 +4,26 @@
 #ifndef _AM9511_H
 #define _AM9511_H
 
+/* Smallest and largest numbers in the AM9511 floating point
+ * format. 0.5x2^-64 to 0.99999..x2^63.
+ *
+ * As a note: these values can be exactly computed:
+ *
+ * unsigned char am_small[4], am_big[4];
+ * fp_put(0, -64, 0x80, 0x0000); will generate AM_SMALL
+ * fp_am(am_small);
+ * fp_put(0,  63, 0xff, 0xffff); will generate AM_BIG
+ * fp_am(am_big);
+ */
+#define AM_SMALL    2.71051e-20
+#define AM_BIG      9.22337e+18
+#define AM_PI       3.141592
+
 #define AM_SR       0x80 /* service request on completion */
-#define AM_SINGLE   0x40 /* 32/16 */
-#define AM_DOUBLE   0x00
-#define AM_FIXED    0x20 /* float/fixed */
-#define AM_FLOAT    0x00
+#define AM_SINGLE   0x60 /* 16 bit integer */
+#define AM_DOUBLE   0x20 /* 32 bit integer */
+#define AM_FIXED    0x20 /* fixed point */
+#define AM_FLOAT    0x00 /* 32 bit float */
 
 #define AM_NOP      0x00 /* no operation */
 #define AM_SQRT     0x01 /* square root */

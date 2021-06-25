@@ -514,7 +514,7 @@ int fp_am(void *p) {
  * And, as an important note: the value of fptmp is not saved -- to make
  * this code re-entrant, fptmp must be saved and restored. fp_get() and
  * fp_put() is the way to do this. The reason for this madness is that
- * we want to get good code, because this may be run on the Z80.
+ * we want to get good code, and this may be run on the Z80.
  */
 void fp_get(unsigned char *sign,
 	    int *exponent,
