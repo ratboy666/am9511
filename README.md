@@ -28,8 +28,11 @@ both port values must be in decimal. Typical values would be 80 and 81
 ova.c implements integer 16 and 32 bit arithmetic, with overflow.
 
 am9511 is not complete, and not usable (the floatcnv part is usable). This
-is under heavy development.
+is under heavy development. am9511 needs more extensive testing -- test.c
+needs more work.
 
 getopt.c is the BSD getopt() function, because HI-TECH C doesn't have it.
 
-
+HI-TECH C is not "fully" ANSI C 89 compatible. "ansi.h" defines signed,
+const, volatile. Can't blame HI-TECH C 3.09 -- the standard was two years
+AFTER this compiler.
