@@ -1,6 +1,7 @@
 # am9511
 This is a library to allow conversion of 32 bit floating point formats. AM9511,
-Microsoft, IEEE, Hi-Tech C formats are supported.
+Microsoft, IEEE, Hi-Tech C formats are supported. Emulation of the AM9511 is the
+end goal.
 
 This is designed to run both on a Z80, or on a generic sytem with gcc (or tcc).
 
@@ -12,8 +13,8 @@ emulators. This part could be used with 8080, Z80, 8085, 6800, z8000, and even
 Apple 2 (6502) systems, providing 16 and 32 bit integer and 32 bit floating
 point.
 
-test.com is a basic test of the emulator (note, only NOP, PUPI and CHS
-are implemented).
+test.com is a basic test of the emulator (note -- basic functions are implemented,
+advanced features (SQRT, PWR, SIN, etc) are not yet). Beginning test of arithmetic.
 
 testhw.com is the same as test.com, but runs on the actual chip:
 
