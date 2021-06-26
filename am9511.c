@@ -153,7 +153,7 @@ static void pto(void) {
  *
  * Note that the SIGN and ZERO flags are set from the element that
  * is next on stack. But... it may be wrong! We do not know what the
- * new tos element really is!
+ * new tos element really is! (in terms of type)
  * The guide states and SIGN and ZERO are affected, but no more than that.
  */
 static void pop(void) {
@@ -242,11 +242,25 @@ static void flts(void) {
 static void fltd(void) {
     int32 n;
     float x;
+    int b;
 
-    n = am_pop();
-    n = (n << 8) | am_pop();
-    n = (n << 8) | am_pop();
-    n = (n << 8) | am_pop();
+    /* HI-TECH C long shift bug
+     */
+    b = am_pop();
+    n = b;
+
+    n = n << 8;
+    b = am_pop();
+    n = n | b;
+
+    n = n << 8;
+    b = am_pop();
+    n = n | b;
+
+    n = n << 8;
+    b = am_pop();
+    n = n | b;
+
     x = n;
     push_float(x);
 }
@@ -283,11 +297,16 @@ static void fixd(void) {
     float x;
     unsigned char *s;
     int32 n;
+    float xl, xh;
 
     s = stpos(-4);
     am_fp(s);
     fp_na(&x);
-    if ((x < (float)(0x80000000L)) || (x > (float)(0x7fffffffL))) {
+    n = -2147483648;
+    xl = (float)n;
+    n = 2147483647;
+    xh = (float)n;
+    if ((x < xl) || (x > xh)) {
 	status |= AM_ERR_OVF;
 	sz();
 	return;
@@ -391,10 +410,10 @@ static void divi(void) {
     int div0;
 
     if (IS_SINGLE) {
-        div0 = mulu16(stpos(-4), stpos(-2), stpos(-4));
+        div0 = div16(stpos(-4), stpos(-2), stpos(-4));
         dec_sp(2);
     } else {
-        div0 = mulu32(stpos(-8), stpos(-4), stpos(-8));
+        div0 = div32(stpos(-8), stpos(-4), stpos(-8));
         dec_sp(4);
     }
     if (div0)
@@ -622,6 +641,7 @@ void am_dump(unsigned char op) {
     int32 nl;
     float x;
     unsigned char t = status;
+    int b;
     static char *opnames[] = {
         "NOP",  "SQRT", "SIN",  "COS",
         "TAN",  "ASIN", "ACOS", "ATAN",
@@ -680,10 +700,34 @@ void am_dump(unsigned char op) {
                                                *stpos(-(i * 4) - 3),
                                                *stpos(-(i * 4) - 4));
 	    if (IS_FIXED) {
+#if 0
+		/* Borked -- HI-TECH C bug
+		 *
+		 * We have seen this before -- now that we have a
+		 * "fix" (work-around) we will use that.
+		 */
                 nl =             *stpos(-(i * 4) - 1);
                 nl = (nl << 8) | *stpos(-(i * 4) - 2);
                 nl = (nl << 8) | *stpos(-(i * 4) - 3);
                 nl = (nl << 8) | *stpos(-(i * 4) - 4);
+#else
+		/* We use the following instead, which seems to work
+		 */
+                b = *stpos(-(i * 4) - 1);
+		nl = b;
+
+		nl = nl << 8;
+                b = *stpos(-(i * 4) - 2);
+		nl = nl | b;
+
+		nl = nl << 8;
+                b = *stpos(-(i * 4) - 3);
+		nl = nl | b;
+
+		nl = nl << 8;
+                b = *stpos(-(i * 4) - 4);
+		nl = nl | b;
+#endif
 		printf("%ld\n", (long)nl);
 	    } else {
 		am_fp(stpos(-(i * 4) - 4));

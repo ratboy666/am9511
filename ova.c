@@ -287,9 +287,11 @@ static uint16 mul8(unsigned char m, unsigned char n) {
 }
 
 /* Multiply 16x16->32
+ *
+ * r may be one or both of the operands
  */
 static void mul16(unsigned char *m, unsigned char *n, unsigned char *r) {
-#if 0
+#if 0 
     /* If we have 16x16->32 multiply, use it.
      */
     uint32 a, b, c;
@@ -297,10 +299,11 @@ static void mul16(unsigned char *m, unsigned char *n, unsigned char *r) {
     a = m[0] + (m[1] << 8);
     b = n[0] + (n[1] << 8);
     c = a * b;
+    /* printf("mul16: a= %04x, b = %04x, c = %08x\n", a, b, c); */
     r[0] = c & 0xff;
-    r[1] = (c << 8) & 0xff;
-    r[2] = (c << 16) & 0xff;
-    r[3] = (c << 24) & 0xff;
+    r[1] = (c >> 8) & 0xff;
+    r[2] = (c >> 16) & 0xff;
+    r[3] = (c >> 24) & 0xff;
 #else
     /* Build 16x16->32 from 8x8->16 bit multiply
      */
@@ -317,42 +320,50 @@ static void mul16(unsigned char *m, unsigned char *n, unsigned char *r) {
 
     uint16 a;
     int carry;
-    unsigned char r2[4], r3[4];
+    unsigned char r2[4], r3[4], r4[4];
     int i;
 
     for (i = 0; i < 4; ++i)
-	r[i] = r2[i] = r3[i] = 0;
+	r2[i] = r3[i] = r[4] = 0;
 
-    /* 3
+    /* r2:
+     *
+     * 3
      * 2
      * 1 | mLow_nLow
      * 0 |
      */
-    r[0] = mLow_nLow & 0xff;
-    r[1] = (mLow_nLow >> 8) & 0xff;
+    r2[0] = mLow_nLow & 0xff;
+    r2[1] = (mLow_nLow >> 8) & 0xff;
 
-    /* 3
+    /* r3:
+     *
+     * 3
      * 2 | mHigh_nLow + mLow_nHigh
      * 1 |
      * 0
      */
     carry = add16((unsigned char *)&mHigh_nLow,
 		  (unsigned char *)&mLow_nHigh,
-		  r2 + 1);
+		  r3 + 1);
 
-    /* 3 | mHigh_nHigh (+ carry)
+    /* r4:
+     *
+     * 3 | mHigh_nHigh (+ carry)
      * 2 |
      * 1
      * 0
      */
     a = mHigh_nHigh + carry;
-    r3[2] = a & 0xff;
-    r3[3] = (a >> 8) & 0xff;
+    r4[2] = a & 0xff;
+    r4[3] = (a >> 8) & 0xff;
 
     /* r = r2 + r3
      */
-    add32(r, r2, r);
-    add32(r, r3, r);
+    add32(r2, r3, r);
+
+    /* r = r + r4 */
+    add32(r, r4, r);
 #endif
 }
 

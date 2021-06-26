@@ -39,15 +39,22 @@
 #       much complete, and can submit for inclusion into z80pack
 #       and altair-duino.
 
+# set -v to display without expansion
+set -x
+
 if true; then
 
   # Build for gcc (emulation)
   #
   # -I. needed because #include <ansi.h> has to find ansi.h
   #
+  # Compile hw9511.c to validate compile on gcc
+  #
   echo building test
   gcc -O3 -I. -Wall -c hw9511.c
   gcc -O3 -I. -Wall -o test test.c getopt.c am9511.c floatcnv.c ova.c
+  gcc -O3 -I. -Wall -DTEST1 -DTEST2 -DTEST3 -DTEST4 -o test14 test.c getopt.c am9511.c floatcnv.c ova.c
+  gcc -O3 -I. -Wall -DTEST5 -DTEST6 -DTEST7 -DTEST8 -o test58 test.c getopt.c am9511.c floatcnv.c ova.c
 
 fi
 
@@ -64,12 +71,27 @@ if true; then
   zxc -c -o am9511.c
   zxc -c -o floatcnv.c
   zxc -c -o ova.c
+  #
   rm testhw.c
   touch testhw.c
   zxc -c -o testhw.c
+  #
+  zxc -c -o -DTEST1 -DTEST2 -DTEST3 -DTEST4 test.c
+  zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
+  cp test.com test14.com
+  zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
+  cp testhw.com testhw14.com
+  #
+  zxc cnvtest.c floatcnv.obj -LF
+  #
+  zxc -c -o -DTEST5 -DTEST6 -DTEST7 -DTEST8 test.c
+  zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
+  mv test.com test58.com
+  zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
+  cp testhw.com testhw58.com
+  #
   zxc -c -o test.c
   zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
   zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
-  zxc cnvtest.c floatcnv.obj -LF
 
 fi

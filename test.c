@@ -49,13 +49,7 @@ unsigned char am_wait(void) {
  * from a file to the device (or emulator). But... I am going to
  * get the basic functions operational, and then write the "advanced"
  * script based test harness in MBASIC instead.
- *
- * Define the test(s) desired
  */
-
-#define TEST1
-#define TEST2
-#define TEST3
 
 #ifdef TEST1
 
@@ -315,7 +309,7 @@ void am_test2(void) {
 
 #ifdef TEST3
 
-/* TEST3: PTO, POP, XCH
+/* TEST3: PTO, POP, XC, FIXS, FIXD
  */
 void am_test3(void) {
 
@@ -335,27 +329,406 @@ void am_test3(void) {
     am_command(AM_PTO | AM_FLOAT);
     am_wait();
 
-    am_dump(AM_DOUBLE);
+    /* am_dump(AM_DOUBLE); */
 
     /* Execute POP
      */
 
     am_command(AM_POP | AM_FLOAT);
     am_wait();
-    am_dump(AM_DOUBLE);
+    /* am_dump(AM_DOUBLE); */
 
     /* Execute POP and XCH
      */
 
     am_command(AM_POP | AM_DOUBLE);
     am_wait();
-    am_dump(AM_DOUBLE);
+    /* am_dump(AM_DOUBLE); */
     am_command(AM_XCH | AM_DOUBLE);
     am_wait();
-    am_dump(AM_DOUBLE);
+    /* am_dump(AM_DOUBLE); */
+
+    /* FIXS and FIXD
+     */
+
+    am_command(AM_PUPI);
+    am_wait();
+    am_command(AM_PTO | AM_FLOAT);
+    am_wait();
+    am_command(AM_FIXS);
+    am_wait();
+    /* am_dump(AM_SINGLE); */
+    printf("PUPI/FIXS ->\n");
+    printf("   %d\n", am_pop());
+    printf("   %d\n", am_pop());
+
+    am_command(AM_FIXD);
+    am_wait();
+    /* am_dump(AM_DOUBLE); */
+    printf("PUPI/FIXD ->\n");
+    printf("   %d\n", am_pop());
+    printf("   %d\n", am_pop());
+    printf("   %d\n", am_pop());
+    printf("   %d\n", am_pop());
+
+    /* Execute FLTD
+     */
+
+    am_command(AM_FLTD);
+    am_wait();
+    /* am_dump(AM_FLOAT); */
+
+    /* Execute FLTS
+     */
+
+    am_push(1000 & 0xff);
+    am_push(1000 >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    am_command(AM_FIXS);
+    /* am_dump(AM_SINGLE); */
+    printf("1000/FLTS/FIXS ->\n");
+    printf("   %d\n", am_pop());
+    printf("   %d\n", am_pop());
 }
 
 #endif
+
+
+#ifdef TEST4
+
+/* Basic arithmetic tests
+ */
+
+void am_test4(void) {
+    int n, s, b;
+    int32 nl;
+    float x;
+    unsigned char v[4];
+
+    printf("am_test4\n");
+
+    am_wait();
+
+    /* Add: SADD DADD FADD
+     */
+
+    /* SADD */
+    n = 1;
+    am_push(n);
+    am_push(n >> 8);
+    n = 2;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_ADD | AM_SINGLE);
+    s = am_wait();
+    n = am_pop();
+    n = (n << 8) | am_pop();
+    printf("SADD: 1 + 2 = %d status = %d\n", n, s);
+
+    /* DADD */
+    nl = 1;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    nl = 2;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    am_command(AM_ADD | AM_DOUBLE);
+    s = am_wait();
+    nl = am_pop();
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    printf("DADD: 1 + 2 = %ld status = %d\n", (long)nl, s);
+
+    /* FADD */
+    n = 1;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    n = 2;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    am_command(AM_FADD);
+    s = am_wait();
+    v[3] = am_pop();
+    v[2] = am_pop();
+    v[1] = am_pop();
+    v[0] = am_pop();
+    am_fp(v);
+    fp_na(&x);
+    printf("FADD: 1.0 + 2.0 = %g status = %d\n", x, s);
+
+}
+
+#endif
+
+
+#ifdef TEST5
+
+void am_test5(void) {
+    int s, b;
+    int16 n;
+    int32 nl;
+    float x;
+    unsigned char v[4];
+
+    printf("am_test5\n");
+
+    am_wait();
+
+    /* Add: SSUB DSUB FSUB
+     */
+
+    /* SSUB */
+    n = 1;
+    am_push(n);
+    am_push(n >> 8);
+    n = 2;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_SUB | AM_SINGLE);
+    s = am_wait();
+    n = am_pop();
+    n = (n << 8) | am_pop();
+    printf("SSUB: 1 - 2 = %d status = %d\n", n, s);
+
+    /* DSUB */
+    nl = 1;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    nl = 2;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    am_command(AM_SUB | AM_DOUBLE);
+    s = am_wait();
+    nl = am_pop();
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    printf("DSUB: 1 - 2 = %ld status = %d\n", (long)nl, s);
+
+    /* FSUB */
+    n = 1;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    n = 2;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    am_command(AM_FSUB);
+    s = am_wait();
+    v[3] = am_pop();
+    v[2] = am_pop();
+    v[1] = am_pop();
+    v[0] = am_pop();
+    am_fp(v);
+    fp_na(&x);
+    printf("FSUB: 1.0 - 2.0 = %g status = %d\n", x, s);
+
+    /* DIV: SDIV DDIV FDIV
+     */
+
+    /* SDIV */
+    n = 10;
+    am_push(n);
+    am_push(n >> 8);
+    n = 3;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_DIV | AM_SINGLE);
+    s = am_wait();
+    n = am_pop();
+    n = (n << 8) | am_pop();
+    printf("SDIV: 10 / 3 = %d status = %d\n", n, s);
+
+    /* DSUB */
+    nl = 10;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    nl = 3;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    am_command(AM_DIV | AM_DOUBLE);
+    s = am_wait();
+    nl = am_pop();
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    printf("DDIV: 10 /  3 = %ld status = %d\n", (long)nl, s);
+
+    /* FDIV */
+    n = 10;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    n = 3;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    am_command(AM_FDIV);
+    s = am_wait();
+    v[3] = am_pop();
+    v[2] = am_pop();
+    v[1] = am_pop();
+    v[0] = am_pop();
+    am_fp(v);
+    fp_na(&x);
+    printf("FDIV: 10.0 / 3.0 = %g status = %d\n", x, s);
+}
+
+#endif
+
+
+#ifdef TEST6
+
+/* multiply, float, single lower/upper, double lower/upper
+ */
+
+void am_test6(void) {
+    int s, b;
+    int16 n;
+    int32 nl;
+    float x;
+    unsigned char v[4];
+
+    printf("am_test6\n");
+
+    am_wait();
+
+    /* MUL: SMUL DMUL FMUL
+     */
+
+    /* SMUL */
+    n = 3;
+    am_push(n);
+    am_push(n >> 8);
+    n = 10;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_MUL | AM_SINGLE);
+    s = am_wait();
+    n = am_pop();
+    n = (n << 8) | am_pop();
+    printf("SMUL: 10 * 3 = %d status = %d\n", n, s);
+
+    /* DMUL*/
+    nl = 10;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    nl = 3;
+    am_push(nl);
+    am_push(nl >> 8);
+    am_push(nl >> 16);
+    am_push(nl >> 24);
+    am_command(AM_MUL | AM_DOUBLE);
+    s = am_wait();
+    nl = am_pop();
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop();
+    nl = nl << 8;
+    nl = nl | b;
+    printf("DMUL: 10 * 3 = %ld status = %d\n", (long)nl, s);
+
+    /* FMUL */
+    n = 10;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    n = 3;
+    am_push(n);
+    am_push(n >> 8);
+    am_command(AM_FLTS);
+    am_wait();
+    am_command(AM_FMUL);
+    s = am_wait();
+    v[3] = am_pop();
+    v[2] = am_pop();
+    v[1] = am_pop();
+    v[0] = am_pop();
+    am_fp(v);
+    fp_na(&x);
+    printf("FMUL: 10.0 * 3.0 = %g status = %d\n", x, s);
+
+    /* MUU */
+
+    /* SMUU */
+    printf("0x1000 * 0x40 = 0x0004 0000\n");
+    n = 0x1000;
+    am_push(n);
+    am_push(n >> 8);
+    n = 0x40;
+    am_push(n);
+    am_push(n >> 8);
+    /* 0x1000 * 0x40 = 0x40 0000 */
+    am_command(AM_MUL | AM_SINGLE);
+    s = am_wait();
+    n = am_pop();
+    n = (n << 8) | am_pop();
+    printf("SMUL: 0x1000 * 0x40 = %d (0) status = %d (34)\n", n, s);
+
+    n = 0x1000;
+    am_push(n);
+    am_push(n >> 8);
+    n = 0x40;
+    am_push(n);
+    am_push(n >> 8);
+    /* 0x1000 * 0x40 = 0x40 0000 */
+    am_command(AM_MUU | AM_SINGLE);
+    s = am_wait();
+    n = am_pop();
+    n = (n << 8) | am_pop();
+    printf("SMUU: 0x1000 * 0x40 = %d (4) status = %d (0)\n", n, s);
+}
+
+#endif
+
 
 void am_test(void) {
 #ifdef TEST1
@@ -367,13 +740,15 @@ void am_test(void) {
 #ifdef TEST3
     am_test3();
 #endif
-    /* Now we can get into arithmetic, integer 16, integer 32 and float.
-     *
-     * Start with simple validation, then move into detail testing. After
-     * we have some basic validation, we can tie this into MBASIC and
-     * build our test harness. I hope that we can find a system with
-     * Z80 and AM9511 for validation.
-     */
+#ifdef TEST4
+    am_test4();
+#endif
+#ifdef TEST5
+    am_test5();
+#endif
+#ifdef TEST6
+    am_test6();
+#endif
 }
 
 
