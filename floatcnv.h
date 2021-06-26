@@ -30,22 +30,22 @@
 #ifndef FLOATCONV_H
 #define FLOATCONV_H
 
-#define FP_OK   0
-#define FP_ERR  1
+#define FP_OK   0 /* conversion ok */
+#define FP_ERR  1 /* conversion failed (won't fit in format) */
 
-int ie_fp(void *);
-int fp_ie(void *);
-int hi_fp(void *);
-int fp_hi(void *);
-int ms_fp(void *);
-int fp_ms(void *);
-int am_fp(void *);
-int fp_am(void *);
-void fp_get(unsigned char *sign,
+int ie_fp(void *); /* ieee to fp */
+int fp_ie(void *); /* fp to ieee */
+int hi_fp(void *); /* hitech to fp */
+int fp_hi(void *); /* fp to hitech */
+int ms_fp(void *); /* microsoft to fp */
+int fp_ms(void *); /* fp to microsoft */
+int am_fp(void *); /* am9511 to fp */
+int fp_am(void *); /* fp to am9511*/
+void fp_get(unsigned char *sign,  /* get fptmp fields */
 	    int *exponent,
 	    unsigned char *mantissa_h,
 	    unsigned int *mantissa_l);
-void fp_put(unsigned char sign,
+void fp_put(unsigned char sign,   /* set fptmp fields */
 	    int exponent,
 	    unsigned char mantissa_h,
 	    unsigned int mantissa_l);

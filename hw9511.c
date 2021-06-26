@@ -7,9 +7,7 @@
 #ifdef z80
 #include <sys.h>
 #else
-/* WARNING - this does not access ANYTHING. This is only here to
- *           allow compiling with gcc.
- */
+#pragma GCC warning "inp and outp are dummy functions"
 #define inp(port) 0
 #define outp(port,data)
 #endif
@@ -55,5 +53,12 @@ void am_command(unsigned char n) {
 void am_reset(int s, int d) {
     status = s;
     data = d;
+}
+
+
+/* Dump am9511 stack
+ */
+void am_dump(unsigned char op) {
+    op = op;
 }
 

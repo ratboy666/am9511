@@ -66,7 +66,8 @@ unsigned char am_wait(void) {
  */
 
 void am_test1(void) {
-    int s, n;
+    int s;
+    int16 n;
     int32 nl;
     unsigned char v[4];
     float x;
@@ -88,6 +89,8 @@ void am_test1(void) {
     am_push(2);
     am_push(3);
     am_push(4);
+
+
     if ((n = am_pop()) != 4) printf("push/pop error %d (4)\n", n);
     if ((n = am_pop()) != 3) printf("push/pop error %d (3)\n", n);
     if ((n = am_pop()) != 2) printf("push/pop error %d (2)\n", n);
@@ -100,6 +103,11 @@ void am_test1(void) {
      */
     am_command(AM_PUPI);
     s = am_wait();
+
+    /* Demonstrate am_dump()
+     */
+    am_dump(AM_FLOAT); /* AM_SINGLE, AM_DOUBLE, AM_FLOAT */
+
     printf("PUPI: am9511 status = %d\n", s);
     v[3] = am_pop();
     v[2] = am_pop();
@@ -112,12 +120,16 @@ void am_test1(void) {
     fp_na(&x);
     printf("PUPI: %g (should be 3.141592)\n", x);
 
-    /* Execute CHSS
+    /* Execute CHSS.
+     *
+     * For 16 bit tests, we use int16. This is important for GCC
+     * (not for z80 -- int is int16 on that platform). We just need
+     * to be careful to use int16 and int32 as appropriate.
      */
     n = 2;
     am_push(n);
     am_push(n >> 8);
-    am_command(AM_CHS | AM_FIXED | AM_SINGLE);
+    am_command(AM_CHS | AM_SINGLE);
     s = am_wait();
     printf("CHSS %d status = %d (%d)\n", n, s, AM_SIGN);
     n = am_pop();
@@ -127,7 +139,7 @@ void am_test1(void) {
     n = 0;
     am_push(n);
     am_push(n >> 8);
-    am_command(AM_CHS | AM_FIXED | AM_SINGLE);
+    am_command(AM_CHS | AM_SINGLE);
     s = am_wait();
     printf("CHSS %d status = %d (%d)\n", n, s, AM_ZERO);
     n = am_pop();
@@ -137,7 +149,7 @@ void am_test1(void) {
     n = -30;
     am_push(n);
     am_push(n >> 8);
-    am_command(AM_CHS | AM_FIXED | AM_SINGLE);
+    am_command(AM_CHS | AM_SINGLE);
     s = am_wait();
     printf("CHSS %d status = %d (%d)\n", n, s, 0);
     n = am_pop();
@@ -147,7 +159,7 @@ void am_test1(void) {
     n = 0x7fff;
     am_push(n);
     am_push(n >> 8);
-    am_command(AM_CHS | AM_FIXED | AM_SINGLE);
+    am_command(AM_CHS | AM_SINGLE);
     s = am_wait();
     printf("CHSS %d status = %d (%d)\n", n, s, AM_SIGN);
     n = am_pop();
@@ -157,7 +169,7 @@ void am_test1(void) {
     n = 0x8000;
     am_push(n);
     am_push(n >> 8);
-    am_command(AM_CHS | AM_FIXED | AM_SINGLE);
+    am_command(AM_CHS | AM_SINGLE);
     s = am_wait();
     printf("CHSS %d status = %d (%d)\n", n, s, AM_SIGN | AM_ERR_OVF);
     n = am_pop();
@@ -165,6 +177,13 @@ void am_test1(void) {
     printf("   result -> %d\n", n);
 
     /* Execute CHSD
+     *
+     * For CHSD tests, we cast to long. This is done, because we need
+     * to use %ld format on z80, but int32 is not long on GCC. So, we
+     * can either vary the format string, -or- cast the argument. On
+     * the z80, this is the same and gives the correct result. On GCC,
+     * this makes the argument match the format, and again produces
+     * the desired result.
      */
 
     nl = 2;
@@ -172,42 +191,42 @@ void am_test1(void) {
     am_push(nl >> 8);
     am_push(nl >> 16);
     am_push(nl >> 24);
-    am_command(AM_CHS | AM_FIXED | AM_DOUBLE);
+    am_command(AM_CHS | AM_DOUBLE);
     s = am_wait();
-    printf("CHSD %ld status = %d (%d)\n", nl, s, AM_SIGN);
+    printf("CHSD %ld status = %d (%d)\n", (long)nl, s, AM_SIGN);
     nl = am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
-    printf("   result -> %ld\n", nl);
+    printf("   result -> %ld\n", (long)nl);
 
     nl = 0;
     am_push(nl);
     am_push(nl >> 8);
     am_push(nl >> 16);
     am_push(nl >> 24);
-    am_command(AM_CHS | AM_FIXED | AM_DOUBLE);
+    am_command(AM_CHS |  AM_DOUBLE);
     s = am_wait();
-    printf("CHSD %ld status = %d (%d)\n", nl, s, AM_ZERO);
+    printf("CHSD %ld status = %d (%d)\n", (long)nl, s, AM_ZERO);
     nl = am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
-    printf("   result -> %ld\n", nl);
+    printf("   result -> %ld\n", (long)nl);
 
     nl = -30;
     am_push(nl);
     am_push(nl >> 8);
     am_push(nl >> 16);
     am_push(nl >> 24);
-    am_command(AM_CHS | AM_FIXED | AM_DOUBLE);
+    am_command(AM_CHS | AM_DOUBLE);
     s = am_wait();
-    printf("CHSD %ld status = %d (%d)\n", nl, s, 0);
+    printf("CHSD %ld status = %d (%d)\n", (long)nl, s, 0);
     nl = am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
-    printf("   result -> %ld\n", nl);
+    printf("   result -> %ld\n", (long)nl);
 }
 #endif
 
@@ -230,28 +249,28 @@ void am_test2(void) {
     am_push(0xff);
     am_push(0xff);
     am_push(0x7f);
-    am_command(AM_CHS | AM_FIXED | AM_DOUBLE);
+    am_command(AM_CHS | AM_DOUBLE);
     s = am_wait();
-    printf("CHSD %ld status = %d (%d)\n", nl, s, AM_SIGN);
+    printf("CHSD %ld status = %d (%d)\n", (long)nl, s, AM_SIGN);
     nl = am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
-    printf("   result -> %ld\n", nl);
+    printf("   result -> %ld\n", (long)nl);
 
     nl = 0x80000000;
     am_push(0x00);
     am_push(0x00);
     am_push(0x00);
     am_push(0x80);
-    am_command(AM_CHS | AM_FIXED | AM_DOUBLE);
+    am_command(AM_CHS | AM_DOUBLE);
     s = am_wait();
-    printf("CHSD %ld status = %d (%d)\n", nl, s, AM_SIGN | AM_ERR_OVF);
+    printf("CHSD %ld status = %d (%d)\n", (long)nl, s, AM_SIGN | AM_ERR_OVF);
     nl = am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
     nl = (nl << 8) | am_pop();
-    printf("   result -> %ld\n", nl);
+    printf("   result -> %ld\n", (long)nl);
 
     /* Execute CHSF
      */
@@ -296,7 +315,7 @@ void am_test2(void) {
 
 #ifdef TEST3
 
-/* TEST3:
+/* TEST3: PTO, POP, XCH
  */
 void am_test3(void) {
 
@@ -304,6 +323,36 @@ void am_test3(void) {
 
     am_wait();
 
+    /* Execute PTO
+     */
+
+    am_push(1);
+    am_push(2);
+    am_command(AM_PTO | AM_SINGLE);
+    am_wait();
+    am_command(AM_PTO | AM_DOUBLE);
+    am_wait();
+    am_command(AM_PTO | AM_FLOAT);
+    am_wait();
+
+    am_dump(AM_DOUBLE);
+
+    /* Execute POP
+     */
+
+    am_command(AM_POP | AM_FLOAT);
+    am_wait();
+    am_dump(AM_DOUBLE);
+
+    /* Execute POP and XCH
+     */
+
+    am_command(AM_POP | AM_DOUBLE);
+    am_wait();
+    am_dump(AM_DOUBLE);
+    am_command(AM_XCH | AM_DOUBLE);
+    am_wait();
+    am_dump(AM_DOUBLE);
 }
 
 #endif
@@ -318,13 +367,20 @@ void am_test(void) {
 #ifdef TEST3
     am_test3();
 #endif
+    /* Now we can get into arithmetic, integer 16, integer 32 and float.
+     *
+     * Start with simple validation, then move into detail testing. After
+     * we have some basic validation, we can tie this into MBASIC and
+     * build our test harness. I hope that we can find a system with
+     * Z80 and AM9511 for validation.
+     */
 }
 
 
 /* Give usage for am9511 test
  */
 void usage(char *p) {
-    printf("usage: %s [-d port] [-s port]\n");
+    printf("usage: %s [-d port] [-s port]\n", p);
     printf("    -d port    set data port\n");
     printf("    -s port    set status port\n");
     printf("\n");

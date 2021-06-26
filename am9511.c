@@ -78,8 +78,10 @@ unsigned char am_pop(void) {
 /* AM9511 status and operator latch
  */
 static unsigned char status = 0;
-static unsigned char op_latch;
-
+static unsigned char op_latch = 0;
+#ifndef NDEBUG
+static unsigned char last_latch = 0;
+#endif
 
 /* Return status of am9511
  */
@@ -385,7 +387,7 @@ static void muu(void) {
 
 /* DIV
  */
-static void div(void) {
+static void divi(void) {
     int div0;
 
     if (IS_SINGLE) {
@@ -466,6 +468,10 @@ void am_command(unsigned char op) {
 
     op_latch = op;
 
+#ifndef NDEBUG
+    last_latch = op;
+#endif
+
     status = AM_BUSY;
 
     switch (op_latch & AM_OP) {
@@ -527,7 +533,7 @@ void am_command(unsigned char op) {
         break;
 
     case AM_DIV:  /* divide nos/tos */
-	div();
+	divi();
         break;
 
     case AM_FADD: /* floating add */
@@ -597,7 +603,95 @@ void am_reset(int status, int data) {
 
     sp = 0;
     status = 0;
+    op_latch = 0;
+    last_latch = 0;
     for (i = 0; i < 16; ++i)
 	stack[i] = 0;
 }
 
+
+/* Dump stack A..H or A..D, format depends on arg (AM_SINGLE,
+ * AM_DOUBLE, AM_FLOAT). Also dump status and last op_latch.
+ */
+void am_dump(unsigned char op) {
+#ifdef NDEBUG
+    op = op;
+#else
+    int i;
+    int16 n;
+    int32 nl;
+    float x;
+    unsigned char t = status;
+    static char *opnames[] = {
+        "NOP",  "SQRT", "SIN",  "COS",
+        "TAN",  "ASIN", "ACOS", "ATAN",
+        "LOG",  "LN",   "EXP",  "PWR",
+        "ADD",  "SUB",  "MUL",  "DIV",
+        "FADD", "FSUB", "FMUL", "FDIV",
+        "CHS",  "",     "MUU",  "PTO",
+        "POP",  "XCH",  "PUPI", "",
+        "FLTD", "FLTS", "FIXD", "FIXS"
+    };
+
+    printf("AM9511 STATUS: %02x ", status);
+        if (t & AM_BUSY)  printf("BUSY ");
+        if (t & AM_SIGN)  printf("SIGN ");
+        if (t & AM_ZERO)  printf("ZERO ");
+        if (t & AM_CARRY) printf("CARRY ");
+        printf("ERROR: ");
+        t &= AM_ERR_MASK;
+        if (t == AM_ERR_NONE) printf("NONE");
+        if (t & AM_ERR_DIV0)  printf("DIV0");
+        if (t & AM_ERR_NEG)   printf("NEG");
+        if (t & AM_ERR_ARG)   printf("ARG");
+        if (t & AM_ERR_ARG)   printf("ARG");
+        if (t & AM_ERR_UND)   printf("UND");
+        if (t & AM_ERR_OVF)   printf("OVF");
+        printf("\n");
+    t = last_latch;
+    printf("LAST COMMAND: ");
+        if (t & AM_SR)                    printf("SR ");
+        if ((t & AM_SINGLE) == AM_SINGLE) printf("SINGLE ");
+        else if (t & AM_FIXED)            printf("DOUBLE ");
+        else                              printf("FLOAT ");
+        printf("%s\n", opnames[t & AM_OP]);
+    t = op_latch;
+    op_latch = op;
+    printf("AM9511 STACK ");
+    if (IS_SINGLE) {
+	printf("(SINGLE)\n");
+	for (i = 0; i < 8; ++i) {
+            n =            *stpos(-(i * 2) - 1);
+            n = (n << 8) | *stpos(-(i * 2) - 2);
+	    printf("%c: %02x %02x %d\n", 'A' + i,
+                                         *stpos(-(i * 2) - 1),
+                                         *stpos(-(i * 2) - 2),
+					 n);
+	}
+    } else {
+        if (IS_FIXED)
+	    printf("(DOUBLE)\n");
+	else
+	    printf("(FLOAT)\n");
+	for (i = 0; i < 4; ++i) {
+    	    printf("%c: %02x %02x %02x %02x ", 'A' + i,
+                                               *stpos(-(i * 4) - 1),
+                                               *stpos(-(i * 4) - 2),
+                                               *stpos(-(i * 4) - 3),
+                                               *stpos(-(i * 4) - 4));
+	    if (IS_FIXED) {
+                nl =             *stpos(-(i * 4) - 1);
+                nl = (nl << 8) | *stpos(-(i * 4) - 2);
+                nl = (nl << 8) | *stpos(-(i * 4) - 3);
+                nl = (nl << 8) | *stpos(-(i * 4) - 4);
+		printf("%ld\n", (long)nl);
+	    } else {
+		am_fp(stpos(-(i * 4) - 4));
+		fp_na(&x);
+		printf("%g\n", x);
+	    }
+	}
+    }
+    op_latch = t;
+#endif
+}

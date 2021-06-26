@@ -46,11 +46,13 @@
 #define AM_FMUL     0x12 /* floating multiply */
 #define AM_FDIV     0x13 /* floating divide */
 #define AM_CHS      0x14 /* change sign */
+/*                  0x15 */
 #define AM_MUU      0x16 /* multiply, upper half */
 #define AM_PTO      0x17 /* push tos to nos (copy) */
 #define AM_POP      0x18 /* pop */
 #define AM_XCH      0x19 /* exchange tos and nos */
 #define AM_PUPI     0x1a /* push pi */
+/*                  0x1b */
 #define AM_FLTD     0x1c /* 32 bit to float */
 #define AM_FLTS     0x1d /* 16 bit to float */
 #define AM_FIXD     0x1e /* float to 32 bit */
@@ -73,7 +75,13 @@ void          am_push(unsigned char);
 unsigned char am_pop(void);
 unsigned char am_status(void);
 void          am_command(unsigned char);
-void          am_reset(int, int);
+void          am_reset(int status, int data);
+
+#ifdef NDEBUG
+#define am_dump(x)
+#else
+void am_dump(unsigned char);
+#endif
 
 #endif
 

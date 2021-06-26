@@ -39,14 +39,26 @@
 #       much complete, and can submit for inclusion into z80pack
 #       and altair-duino.
 
-if false; then
-  gcc -c hw9511.c
-  gcc test.c getopt.c am9511.c floatcnv.c ova.c
+if true; then
+
+  # Build for gcc (emulation)
+  #
+  # -I. needed because #include <ansi.h> has to find ansi.h
+  #
+  echo building test
+  gcc -O3 -I. -Wall -c hw9511.c
+  gcc -O3 -I. -Wall -o test test.c getopt.c am9511.c floatcnv.c ova.c
+
 fi
 
 if true; then
-  # build for z80 using zxcc
+
+  # Build for z80 using zxcc (validation)
   #
+  # We optimize everything, to get smallest/best code. Need -LF
+  # on link for floating point.
+  #
+  echo building test.com
   zxc -c -o hw9511.c
   zxc -c -o getopt.c
   zxc -c -o am9511.c
@@ -59,4 +71,5 @@ if true; then
   zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
   zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
   zxc cnvtest.c floatcnv.obj -LF
+
 fi
