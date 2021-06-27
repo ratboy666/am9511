@@ -17,7 +17,7 @@ advanced features (SQRT, PWR, SIN, etc) are not yet). Beginning test of arithmet
 (test14.com, test58.com)
 
 test58.com works with gcc -- but fails with HI-TECH C. This is due to an error in the compiler. I am looking
-for a work-around now.
+for a work-around now. Actually, looks like a stack smashing bug... mea culpa.
 
 testhw.com is the same as test.com, but runs on the actual chip:
 
