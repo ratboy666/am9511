@@ -4,6 +4,9 @@ Microsoft, IEEE, Hi-Tech C formats are supported.
 
 This is designed to run both on a Z80, or on a generic sytem with gcc (or tcc).
 
+Emulation of AM9511 is now feature complete -- can be integrated. NOTE - this is beta only. If integrated, or using
+live chip, AM9511.BAS is MBASIC test program.
+
 Some sample reference floating values are given for tests.
 
 We are mapping AM9511 functionality into the host, for future integration into 8080/Z80 (or other)
