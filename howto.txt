@@ -1,0 +1,95 @@
+How to install
+
+am9511 is meant to be installed into an emulator.
+
+We use zxcc here as an example:
+
+https://www.seasip.info/Unix/Zxcc/
+
+I use zxcc to cross compile HI-TECH C, and do "light testing".
+zxcc will run mbasic 
+
+: fred@tara bin $; mbasic
+BASIC-80 Rev. 5.21
+[CP/M Version]
+Copyright 1977-1981 (C) by Microsoft
+Created: 28-Jul-81
+39480 Bytes free
+Ok
+
+and I want to use MBASIC as a test harness. So, zxcc becomes the
+first target. First, download and build zxcc, and make sure that
+it works.
+
+In directory zxcc-0.5.7/bin
+
+Add files
+    am9511.c
+    am9511.h
+    ansi.h
+    floatcnv.c
+    flaatcnv.h
+    ova.c
+    ova.h
+    types.h
+
+from the am9511 project.
+
+Modify the Makefile:
+
+- add "-lm" to LIBS
+- add "am9511.$(OBJEXT) ova.$(OBJEXT) floatcnv.$(OBJEXT)" to
+  am_zxcc_OBJECTS
+- add -I. to CPPFLAGS (? may not be needed)
+
+Edit zxcc.c
+
+Replace:
+
+unsigned int in() { return 0; }
+unsigned int out() { return 0; }
+
+with
+
+/* support AM9511
+ *
+ * The interface is very simple -- if interrupts are not used.
+ */
+
+
+#define AM_STATUS 0x51
+#define AM_DATA   0x50
+
+unsigned int in(tstates,a,v) {
+    unsigned int r = 0;
+    if (v == AM_DATA)
+        r = am_pop();
+    else if (v == AM_STATUS)
+        r = am_status();
+    return r;
+}
+
+unsigned int out(tstates,a,v,a2) {
+    if (v == AM_DATA)
+        am_push(a);
+    else if (v == AM_STATUS)
+        am_command(a);
+    return 0;
+}
+
+
+And, add
+
+#include "am9511.h"
+
+to the top of the file
+
+"make" and "make install"
+
+Now, zxcc should have the AM9511 emulator, as ports 80 and 81.
+
+See AM9511.BAS for an MBASIC program that is the start of a test.
+
+As am9511 matures, additional instructions on incorporating into
+other emulators should be given. Not ready yet... so be careful.
+
