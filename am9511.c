@@ -422,6 +422,23 @@ static void divi(void) {
 }
 
 
+/* Detect and report float overflow/underflow
+ */
+static int fov(double r) {
+    int e;
+
+    frexp(r, &e);
+    if (e > 63) {
+	status |= AM_ERR_OVF;
+	return 1;
+    } else if (e < -64) {
+	status |= AM_ERR_UND;
+	return 1;
+    }
+    return 0;
+}
+
+
 /* basicf - basic FADD/FSUB/FMUL/FDIV
  *
  * The guide says that overflow and underflow are detected on the
@@ -462,9 +479,12 @@ static void basicf(void) {
 	break;
     }
 
+    /* We do not use fov() because we want to bias exponent by 128
+     * on OVF/UND per the guide.
+     */
     m = frexp(r, &e);
     if (e > 63) {
-	status |= AM_ERR_UND;
+	status |= AM_ERR_OVF;
 	e -= 128;
 	r = ldexp(m, e);
     } else if (e < -64) {
@@ -476,6 +496,147 @@ static void basicf(void) {
     fp_am(bp);
     dec_sp(4);
     op_latch = AM_FLOAT;
+    sz();
+}
+
+
+/* SQRT EXP SIN COS TAN LN LOG etc (functions with single arg)
+ *
+ * Note that we use the -lm math library with GCC, and the -LF library
+ * with HI-TECH C. This means we are limited to only using functions
+ * that are in both. This explains the strange shenanigans with double
+ * here.
+ */
+static void ffunc(void) {
+    unsigned char *ap;
+    float a;
+    double x;
+
+    ap = stpos(-4);
+    am_fp(ap);
+    fp_na(&a);
+
+    x = a;
+    switch (op_latch & AM_OP) {
+    case AM_SQRT:
+        if (a < 0.0) {
+	    status |= AM_ERR_NEG;
+	    goto err;
+	} else
+            x = sqrt(x);
+	break;
+    case AM_EXP:
+        /* -1.0 x 2^5 .. 1.0 x 2^5 */
+        if ((a < -32.0) || (a > 32.0)) {
+	    status |= AM_ERR_ARG;
+	    goto err;
+	} else
+            x = exp(x);
+	break;
+    case AM_SIN:
+	x = sin(x);
+	break;
+    case AM_COS:
+	x = cos(x);
+	break;
+    case AM_TAN:
+	/* 2^-12 */
+	if (a < (1.0 / 4096.0))
+	    goto err;
+        x = tan(x);
+	break;
+    case AM_LN:
+	if (a < 0.0) {
+	    status |= AM_ERR_NEG;
+	    goto err;
+	}
+	x = log(x);
+	break;
+    case AM_LOG:
+	if (a < 0.0) {
+	    status |= AM_ERR_NEG;
+	    goto err;
+	}
+	x = log10(x);
+	break;
+    case AM_ASIN:
+	if ((a < -1.0) || (a > 1.0)) {
+	   status |= AM_ERR_ARG;
+	   goto err;
+	}
+	x = asin(x);
+	break;
+    case AM_ACOS:
+	if ((a < -1.0) || (a > 1.0)) {
+	   status |= AM_ERR_ARG;
+	   goto err;
+	}
+	x = acos(x);
+	break;
+    case AM_ATAN:
+	x = atan(x);
+	break;
+    }
+    if (fov(x))
+	goto err;
+    a = x;
+    na_fp(&a);
+    fp_am(ap);
+err:
+    op_latch = AM_FLOAT;
+    sz();
+}
+
+
+/* PWR
+ *
+ * B^A = EXP( A * LN(B) )
+ */
+static void pwr(void) {
+    /* B^A = EXP( A * LN(B) ) */
+    unsigned char *ap, *bp;
+    float a, b;
+    double x;
+
+    /* A */
+    ap = stpos(-4);
+    am_fp(ap);
+    fp_na(&a);
+
+    /* B */
+    bp = stpos(-8);
+    am_fp(bp);
+    fp_na(&b);
+
+    /* LN(B) */
+    if (b < 0.0) {
+	status |= AM_ERR_NEG;
+	goto err;
+    }
+    x = b;
+    x = log(x);
+
+    /* A * LN(B) */
+    x = (double)a * x;
+
+    /* EXP( A * LN(B) ) */
+    if ((x < -32.0) || (x > 32.0)) {
+        status |= AM_ERR_ARG;
+	goto err;
+    }
+    x = exp(x);
+
+    if (fov(x))
+        goto err;
+
+    /* replace B with result */
+    b = x;
+    na_fp(&b);
+    fp_am(bp);
+
+    /* roll stack */
+    dec_sp(4);
+err:
     sz();
 }
 
@@ -562,49 +723,21 @@ void am_command(unsigned char op) {
 	basicf();
         break;
 
+    case AM_SQRT: /* square root */
+    case AM_EXP:  /* exponential (e^x) */
+    case AM_SIN:  /* sine */
+    case AM_COS:  /* cosine */
+    case AM_TAN:  /* tangent */
+    case AM_LOG:  /* common logarithm (base 10) */
+    case AM_LN:   /* natural logarthm (base e) */
+    case AM_ASIN: /* inverse sine */
+    case AM_ACOS: /* inverse cosine */
+    case AM_ATAN: /* inverse tangent */
+	ffunc();
+        break;
 
     case AM_PWR:  /* power nos^tos */
-	printf("PWR not implemented\n");
-        break;
-
-    case AM_SQRT: /* square root */
-	printf("SQRT not implemented\n");
-        break;
-
-    case AM_SIN:  /* sine */
-	printf("SIN not implemented\n");
-        break;
-
-    case AM_COS:  /* cosine */
-	printf("COS not implemented\n");
-        break;
-
-    case AM_TAN:  /* tangent */
-	printf("TAN not implemented\n");
-        break;
-
-    case AM_ASIN: /* inverse sine */
-	printf("ASIN not implemented\n");
-        break;
-
-    case AM_ACOS: /* inverse cosine */
-	printf("ACOS not implemented\n");
-        break;
-
-    case AM_ATAN: /* inverse tangent */
-	printf("ATAN not implemented\n");
-        break;
-
-    case AM_LOG:  /* common logarithm (base 10) */
-	printf("LOG not implemented\n");
-        break;
-
-    case AM_LN:   /* natural logairthm (base e) */
-	printf("LN not implemented\n");
-        break;
-
-    case AM_EXP:  /* exponential (e^x) */
-	printf("EXP not implemented\n");
+	pwr();
         break;
 
     default:
@@ -630,7 +763,7 @@ void am_reset(int status, int data) {
 
 
 /* Dump stack A..H or A..D, format depends on arg (AM_SINGLE,
- * AM_DOUBLE, AM_FLOAT). Also dump status and last op_latch.
+ * AM_DOUBLE, AM_FLOAT). Dump status and last op_latch.
  */
 void am_dump(unsigned char op) {
 #ifdef NDEBUG
@@ -703,8 +836,7 @@ void am_dump(unsigned char op) {
 #if 0
 		/* Borked -- HI-TECH C bug
 		 *
-		 * We have seen this before -- now that we have a
-		 * "fix" (work-around) we will use that.
+		 * We have seen this before -- use a "fix" (work-around)
 		 */
                 nl =             *stpos(-(i * 4) - 1);
                 nl = (nl << 8) | *stpos(-(i * 4) - 2);

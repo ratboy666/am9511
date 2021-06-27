@@ -52,9 +52,9 @@ if true; then
   #
   echo building test
   gcc -O3 -I. -Wall -c hw9511.c
-  gcc -O3 -I. -Wall -o test test.c getopt.c am9511.c floatcnv.c ova.c
-  gcc -O3 -I. -Wall -DTEST1 -DTEST2 -DTEST3 -DTEST4 -o test14 test.c getopt.c am9511.c floatcnv.c ova.c
-  gcc -O3 -I. -Wall -DTEST5 -DTEST6 -DTEST7 -DTEST8 -o test58 test.c getopt.c am9511.c floatcnv.c ova.c
+  gcc -O3 -I. -Wall -o test test.c getopt.c am9511.c floatcnv.c ova.c -lm
+  gcc -O3 -I. -Wall -DTEST1 -DTEST2 -DTEST3 -DTEST4 -o test14 test.c getopt.c am9511.c floatcnv.c ova.c -lm
+  gcc -O3 -I. -Wall -DTEST5 -DTEST6 -DTEST7 -DTEST8 -o test58 test.c getopt.c am9511.c floatcnv.c ova.c -lm
 
 fi
 
