@@ -2,6 +2,10 @@ How to install
 
 am9511 is meant to be installed into an emulator.
 
+
+Integrating into Zxcc
+=====================
+
 We use zxcc here as an example:
 
 https://www.seasip.info/Unix/Zxcc/
@@ -92,4 +96,53 @@ See AM9511.BAS for an MBASIC program that is the start of a test.
 
 As am9511 matures, additional instructions on incorporating into
 other emulators should be given. Not ready yet... so be careful.
+
+
+Integrating into RunCPM
+=======================
+
+https://github.com/MockbaTheBorg/RunCPM
+
+Download, build, and test RunCPM. After this --
+
+Add files
+    am9511.c
+    am9511.h
+    ansi.h
+    floatcnv.c
+    flaatcnv.h
+    ova.c
+    ova.h
+
+to RunCPM-master/RunCPM
+
+Edit cpu.h:
+
+Add #include "am9511.h" at the top
+
+Find cpu_in and cpu_out (Functions needed by the soft CPU implementat) and
+replace with:
+
+/* AM9511 */
+#define AM_STATUS 0x51
+#define AM_DATA   0x50
+
+void cpu_out(const uint32 Port, const uint32 Value) {
+if (Port == AM_DATA) am_push(Value);
+else if (Port == AM_STATUS) am_command(Value);
+else    _Bios();
+}
+
+uint32 cpu_in(const uint32 Port) {
+if (Port == AM_DATA) return am_pop();
+else if (Port == AM_STATUS) return am_status();
+        _Bdos();
+        return(HIGH_REGISTER(AF));
+}
+
+Rebuild (make posix build). RunCPM should now include am9511 at ports 80
+and 81.
+
+For both Zxcc and RunCPM, MBASIC can be used with AM9511.BAS
+
 
