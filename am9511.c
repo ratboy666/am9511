@@ -187,22 +187,28 @@ static void xch(void) {
 }
 
 
-/* CHSS CHSD CHSF
+/* CHSF
+ */
+static void chsf(void) {
+    /* Floating point sign change - only flip sign
+     * (if not zero). And, as with the AM9511 chip, CHSF
+     * is even faster than CHSS.
+     */
+    if (*stpos(-2) & 0x80)
+        *stpos(-1) ^= 0x80;
+    sz();
+}
+
+
+/* CHSS CHSD
  */
 static void chs(void) {
     if (IS_SINGLE) {
         if (cm16(stpos(-2), stpos(-2)))
 	    status |= AM_ERR_OVF;
-    } else if (IS_FIXED) {
+    } else {
 	if (cm32(stpos(-4), stpos(-4)))
 	    status |= AM_ERR_OVF;
-    } else {
-	/* Floating point sign change - only flip sign
-	 * (if not zero). And, as with the AM9511 chip, CHSF
-	 * is even faster than CHSS.
-	 */
-	if (*stpos(-2) & 0x80)
-	    *stpos(-1) ^= 0x80;
     }
     sz();
 }
@@ -668,6 +674,10 @@ void am_command(unsigned char op) {
 	chs();
 	break;
 
+    case AM_CHSF: /* float change sign */
+	chsf();   /* per Wayne Hortensius */
+	break;
+
     case AM_POP:  /* pop */
 	pop();
         break;
@@ -781,7 +791,7 @@ void am_dump(unsigned char op) {
         "LOG",  "LN",   "EXP",  "PWR",
         "ADD",  "SUB",  "MUL",  "DIV",
         "FADD", "FSUB", "FMUL", "FDIV",
-        "CHS",  "",     "MUU",  "PTO",
+        "CHS",  "CHSF", "MUU",  "PTO",
         "POP",  "XCH",  "PUPI", "",
         "FLTD", "FLTS", "FIXD", "FIXS"
     };

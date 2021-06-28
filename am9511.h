@@ -46,7 +46,7 @@
 #define AM_FMUL     0x12 /* floating multiply */
 #define AM_FDIV     0x13 /* floating divide */
 #define AM_CHS      0x14 /* change sign */
-/*                  0x15 */
+#define AM_CHSF     0x15 /* floating change sign */ 
 #define AM_MUU      0x16 /* multiply, upper half */
 #define AM_PTO      0x17 /* push tos to nos (copy) */
 #define AM_POP      0x18 /* pop */

@@ -14,10 +14,11 @@
 
 
 /* Status and data ports. These are set by am_reset(), so just
- * choose some convenient values.
+ * choose some convenient values. These defaults should be "usual"
+ * for a lot of AM9511 implementations.
  */
-static int status = 0x50;
-static int data   = 0x51;
+static int status = 0x51;
+static int data   = 0x50;
 
 
 /* Push byte to am9511 stack

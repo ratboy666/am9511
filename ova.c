@@ -19,6 +19,9 @@
 #include "types.h"
 
 
+#define USE_MUL16
+
+
 static unsigned char one[] = { 0x01, 0x00, 0x00, 0x00 };
 
 
@@ -278,6 +281,7 @@ int sub32(unsigned char *pa,
  *   --------------------------------------------
  */
 
+#ifndef USE_MUL16
 /* Multiply 8x8->16 bit result. Hopefully, we have hardware
  * which does this. The Z80 does not. But most of its successors
  * do, and most gcc platforms do.
@@ -285,13 +289,14 @@ int sub32(unsigned char *pa,
 static uint16 mul8(unsigned char m, unsigned char n) {
     return m * n;
 }
+#endif
 
 /* Multiply 16x16->32
  *
  * r may be one or both of the operands
  */
 static void mul16(unsigned char *m, unsigned char *n, unsigned char *r) {
-#if 0 
+#ifdef USE_MUL16 
     /* If we have 16x16->32 multiply, use it.
      */
     uint32 a, b, c;
