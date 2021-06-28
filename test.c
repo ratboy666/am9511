@@ -275,7 +275,7 @@ void am_test2(void) {
     am_push(v[1]);
     am_push(v[2]);
     am_push(v[3]);
-    am_command(AM_CHS | AM_FLOAT);
+    am_command(AM_CHSF);
     s = am_wait();
     printf("CHSF %g status = %d (%d)\n", x, s, AM_SIGN);
     v[3] = am_pop();
@@ -293,7 +293,7 @@ void am_test2(void) {
     am_push(v[1]);
     am_push(v[2]);
     am_push(v[3]);
-    am_command(AM_CHS | AM_FLOAT);
+    am_command(AM_CHSF);
     s = am_wait();
     printf("CHSF %g status = %d (%d)\n", x, s, AM_ZERO);
     v[3] = am_pop();

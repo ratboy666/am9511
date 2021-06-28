@@ -65,33 +65,37 @@ if true; then
   # We optimize everything, to get smallest/best code. Need -LF
   # on link for floating point.
   #
+  # Do NOT optimize hw9511.c, as that has inline assembler in
+  # it. Attempting to run OPTIM on that can result in very strange
+  # things -- like the compiler simply hanging up.
+  #
   echo building test.com
-  zxc -c -o hw9511.c
+  zxc -c    hw9511.c
   zxc -c -o getopt.c
   zxc -c -o am9511.c
   zxc -c -o floatcnv.c
   zxc -c -o ova.c
   #
-  rm testhw.c
-  touch testhw.c
-  zxc -c -o testhw.c
+  ##rm testhw.c
+  ##touch testhw.c
+  ##zxc -c -o testhw.c
+  #
+  zxc cnvtest.c floatcnv.obj -LF
   #
   zxc -c -o -DTEST1 -DTEST2 -DTEST3 -DTEST4 test.c
   zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
   cp test.com test14.com
-  zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
-  cp testhw.com testhw14.com
-  #
-  zxc cnvtest.c floatcnv.obj -LF
+  zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
+  cp test.com testhw14.com
   #
   zxc -c -o -DTEST5 -DTEST6 -DTEST7 -DTEST8 test.c
   zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
-  mv test.com test58.com
-  zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
-  cp testhw.com testhw58.com
+  cp test.com test58.com
+  zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
+  cp test.com testhw58.com
   #
   zxc -c -o test.c
+  zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
+  cp test.com testhw.com
   zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
-  zxc testhw.obj test.obj getopt.obj hw9511.obj floatcnv.obj -LF
-
 fi
