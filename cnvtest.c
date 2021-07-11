@@ -10,15 +10,15 @@
 #include "floatcnv.h"
 
 
-/* Dump FP.
+/* Dump FP, using fp_get() to take it apart.
  */
-void fp_dump(void) {
+void fp_dump(void *fpp) {
     unsigned char sign;
     int exponent;
     unsigned char mantissa_h;
     unsigned int mantissa_l;
 
-    fp_get(&sign, &exponent, &mantissa_h, &mantissa_l);
+    fp_get(fpp, &sign, &exponent, &mantissa_h, &mantissa_l);
     printf(" %c0x%02x%04x*2^%d\n", sign ? '-' : '+',
 		                   mantissa_h,
 			           mantissa_l,
@@ -53,6 +53,8 @@ unsigned char hi_p1[] = {         /* hitech 0.1 */
     0xcd, 0xcc, 0xcc, 0x3d
 };
 
+/* Dump 4 bytes in hex.
+ */
 void dump4(void *p) {
     unsigned char *u = p;
     int i;
@@ -61,55 +63,57 @@ void dump4(void *p) {
     printf("\n");
 }
 
-/* Choose target for floating output
+/* Choose target for floating output.
  */
 #ifdef z80
-#define fp_target(p) fp_hi(p)
-#endif
-#ifdef __GNUC__
-#define fp_target(p) fp_ie(p)
-#endif
-#ifdef __TINYC__
-#define fp_target(p) fp_ie(p)
+#define fp_target(p) fp_hi(fpp, p)
+#else
+#define fp_target(p) fp_ie(fpp, p)
 #endif
 
 int main(int ac, char **av) {
     float x;
+    void *fpp;
 
-    am_fp(am9511_pi);
+    fpp = malloc(fp_size());
+    if (fpp == NULL) {
+	fprintf(stderr, "cannot allocate temp\n");
+	return 1;
+    }
+    am_fp(am9511_pi, fpp);
     fp_target(&x);
     printf("am9511      pi: %10g\n", x);
-    fp_dump();
+    fp_dump(fpp);
 
-    am_fp(am9511_5);
+    am_fp(am9511_5, fpp);
     fp_target(&x);
     printf("am9511       5: %10g\n", x);
-    fp_dump();
+    fp_dump(fpp);
 
-    am_fp(am9511_p1); // exp=0x40
+    am_fp(am9511_p1, fpp); /* exp=0x40 */
     fp_target(&x);
     printf("am9511     0.1: %10g\n", x);
-    fp_dump();
+    fp_dump(fpp);
 
-    am_fp(am9511_mp0006); // exp = 0xc0
+    am_fp(am9511_mp0006, fpp); /* exp = 0xc0 */
     fp_target(&x);
     printf("am9511 -0.0006: %10g\n", x);
-    fp_dump();
+    fp_dump(fpp);
 
-    ie_fp(ieee_m5);
+    ie_fp(ieee_m5, fpp);
     fp_target(&x);
     printf("ieee        -5: %10g\n", x);
-    fp_dump();
+    fp_dump(fpp);
 
-    hi_fp(hi_p1);
+    hi_fp(hi_p1, fpp);
     fp_target(&x);
     printf("hi         0.1: %10g\n", x);
-    fp_dump();
+    fp_dump(fpp);
 
-    ms_fp(ms_m1p5);
+    ms_fp(ms_m1p5, fpp);
     fp_target(&x);
     printf("ms        -1.5: %10g\n", x);
-    fp_dump();
+    fp_dump(fpp);
 
     return 0;
 }

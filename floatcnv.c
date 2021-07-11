@@ -53,16 +53,12 @@
  * Separate sign (1 = negative, 0 = positive)
  */
 struct fp {
-    uint8  sign;
-    uint8  mantissa_h;
     uint16 mantissa_l;
     int16  exponent;
+    uint8  sign;
+    uint8  mantissa_h;
 };
 
-
-/* Temporary fp, use fp_put()/fp_get to save/restore if needed.
- */
-static struct fp fptmp = { 0, };
 
 /* memset() is broken with HI-TECH C.
  * The memset() issue prompts us to write and use clear() instead. We avoid
@@ -71,7 +67,7 @@ static struct fp fptmp = { 0, };
  * will be added... by examining z80 assembler output...
  */
 static void clear(void *p, int n) {
-    unsigned char *cp = p;
+    unsigned char *cp = (unsigned char *)p;
     while (n--)
         *cp++ = 0;
 }
@@ -87,20 +83,24 @@ static void clear(void *p, int n) {
  * assuming that the IEEE float occupies 4 bytes of contiguous memory,
  * starting with pointer p.
  */
-int ie_fp(void *p) {
-    unsigned char *ieee = p;
+int ie_fp(void *p, void *fpp) {
+    /* This assignment does not need a cast in C, but gives warning
+     * if the cast is not used in C++
+     */
+    unsigned char *ieee = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Clear destination
      */
-    clear(&fptmp, sizeof(fptmp));
+    clear(fptmp, sizeof(struct fp));
 
     /* Extract exponent. 7 bits from I2, bit from I3.
      */
     e = ((ieee[I3] & 0x7f) << 1) |
-         ((ieee[I2] & 0x80) != 0);
+        ((ieee[I2] & 0x80) != 0);
 
     /* Extract sign. 1 if negative, 0 if positive.
      */
@@ -109,12 +109,12 @@ int ie_fp(void *p) {
     /* If exponent == 0, number is zero.
      */
     if (e == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* If exponent == 0xff, number is NAN, or one of the other specials.
      */
     if (e == 0xff)
-	return FP_ERR;
+        return FP_ERR;
 
     /* Unbias the exponent.
      */
@@ -132,10 +132,10 @@ int ie_fp(void *p) {
 
     /* Save into fp.
      */
-    fptmp.exponent = e;
-    fptmp.sign = s;
-    fptmp.mantissa_h = m_h;
-    fptmp.mantissa_l = m_l;
+    fptmp->exponent = e;
+    fptmp->sign = s;
+    fptmp->mantissa_h = m_h;
+    fptmp->mantissa_l = m_l;
 
     return FP_OK;
 }
@@ -143,18 +143,19 @@ int ie_fp(void *p) {
 
 /* Convert FP to IEEE format.
  */
-int fp_ie(void *p) {
-    unsigned char *ieee = p;
+int fp_ie(void *fpp, void *p) {
+    unsigned char *ieee = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Get from fp.
      */
-    e = fptmp.exponent;
-    m_h = fptmp.mantissa_h;
-    m_l = fptmp.mantissa_l;
-    s = fptmp.sign;
+    e = fptmp->exponent;
+    m_h = fptmp->mantissa_h;
+    m_l = fptmp->mantissa_l;
+    s = fptmp->sign;
 
     /* Clear destination.
      */
@@ -163,7 +164,7 @@ int fp_ie(void *p) {
     /* If mantissa bit 23 is 0, result is 0.0.
      */
     if ((m_h & 0x80) == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* Strip leading 1 bit from mantissa
      */
@@ -172,9 +173,9 @@ int fp_ie(void *p) {
     /* Range check exponent.
      */
     if (e < -126)
-	return FP_ERR;
+        return FP_ERR;
     if (e > 127)
-	return FP_ERR;
+        return FP_ERR;
 
     /* Bias exponent.
      */
@@ -183,13 +184,13 @@ int fp_ie(void *p) {
     /* Low bit of exponent goes into mantissa
      */
     if (e & 1)
-	m_h |= 0x80;
+        m_h |= 0x80;
     e = (e >> 1) & 0x7f;
 
     /* Sign goes to into exponent
      */
     if (s)
-	e |= 0x80;
+        e |= 0x80;
 
     /* Put results into memory
      */
@@ -204,20 +205,21 @@ int fp_ie(void *p) {
 
 /* Convert HITECH to FP format.
  */
-int hi_fp(void *p) {
-    unsigned char *hitech = p;
+int hi_fp(void *p, void *fpp) {
+    unsigned char *hitech = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Clear destination
      */
-    clear(&fptmp, sizeof(fptmp));
+    clear(fptmp, sizeof(struct fp));
 
     /* If bit 23 is zero, must be zero (or not normalized).
      */
     if ((hitech[I2] & 0x80) == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* Gather up sign, and exponent. Remove sign
      * bit from exponent.
@@ -237,10 +239,10 @@ int hi_fp(void *p) {
 
     /* Put into fp.
      */
-    fptmp.sign = s;
-    fptmp.exponent = e;
-    fptmp.mantissa_l = m_l;
-    fptmp.mantissa_h = m_h;
+    fptmp->sign = s;
+    fptmp->exponent = e;
+    fptmp->mantissa_l = m_l;
+    fptmp->mantissa_h = m_h;
 
     return FP_OK;
 }
@@ -248,18 +250,19 @@ int hi_fp(void *p) {
 
 /* Convert FP to HITECH format.
  */
-int fp_hi(void *p) {
-    unsigned char *hitech = p;
+int fp_hi(void *fpp, void *p) {
+    unsigned char *hitech = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Get from fp.
      */
-    e = fptmp.exponent;
-    m_l = fptmp.mantissa_l;
-    m_h = fptmp.mantissa_h;
-    s = fptmp.sign;
+    e = fptmp->exponent;
+    m_l = fptmp->mantissa_l;
+    m_h = fptmp->mantissa_h;
+    s = fptmp->sign;
 
     /* Clear destination.
      */
@@ -268,14 +271,14 @@ int fp_hi(void *p) {
     /* If mantissa bit 23 is 0, result is 0.0.
      */
     if ((m_h & 0x80) == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* Range check the exponent.
      */
     if (e < -65)
-	return FP_ERR;
+        return FP_ERR;
     if (e > 63)
-	return FP_ERR;
+        return FP_ERR;
 
     /* Bias the exponent.
      */ 
@@ -285,7 +288,7 @@ int fp_hi(void *p) {
     /* Add in sign bit to exponent.
      */
     if (s)
-	e |= 0x80;
+        e |= 0x80;
 
     /* Build up output.
      */
@@ -300,20 +303,21 @@ int fp_hi(void *p) {
 
 /* Convert MS to FP format.
  */
-int ms_fp(void *p) {
-    unsigned char *ms = p;
+int ms_fp(void *p, void *fpp) {
+    unsigned char *ms = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Clear destination
      */
-    clear(&fptmp, sizeof(fptmp));
+    clear(fptmp, sizeof(struct fp));
 
     /* If exponent is zero, must be zero.
      */
     if (ms[I3] == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* Gather up sign, and exponent.
      */
@@ -332,10 +336,10 @@ int ms_fp(void *p) {
 
     /* Put into fp.
      */
-    fptmp.sign = s;
-    fptmp.exponent = e;
-    fptmp.mantissa_l = m_l;
-    fptmp.mantissa_h = m_h;
+    fptmp->sign = s;
+    fptmp->exponent = e;
+    fptmp->mantissa_l = m_l;
+    fptmp->mantissa_h = m_h;
 
     return FP_OK;
 }
@@ -343,18 +347,19 @@ int ms_fp(void *p) {
 
 /* Convert FP to MS format.
  */
-int fp_ms(void *p) {
-    unsigned char *ms = p;
+int fp_ms(void *fpp, void *p) {
+    unsigned char *ms = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Get from fp.
      */
-    e = fptmp.exponent;
-    m_l = fptmp.mantissa_l;
-    m_h = fptmp.mantissa_h;
-    s = fptmp.sign;
+    e = fptmp->exponent;
+    m_l = fptmp->mantissa_l;
+    m_h = fptmp->mantissa_h;
+    s = fptmp->sign;
 
     /* Clear destination.
      */
@@ -363,14 +368,14 @@ int fp_ms(void *p) {
     /* If mantissa bit 23 is 0, result is 0.0.
      */
     if ((m_h & 0x80) == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* Range check the exponent.
      */
     if (e < -129)
-	return FP_ERR;
+        return FP_ERR;
     if (e > 126)
-	return FP_ERR;
+        return FP_ERR;
 
     /* Bias the exponent.
      */ 
@@ -380,7 +385,7 @@ int fp_ms(void *p) {
      */
     m_l &= 0x7f;
     if (s)
-	m_l |= 0x80;
+        m_l |= 0x80;
 
     /* Build up output.
      */
@@ -395,15 +400,16 @@ int fp_ms(void *p) {
 
 /* Convert AM9511 to FP format.
  */
-int am_fp(void *p) {
-    unsigned char *am9511 = p;
+int am_fp(void *p, void *fpp) {
+    unsigned char *am9511 = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Clear destination
      */
-    clear(&fptmp, sizeof(fptmp));
+    clear(fptmp, sizeof(struct fp));
 
     /* If bit 23 is low, must be zero. AM9511 format is
      * normalized, but the leading '1' bit is explicit.
@@ -413,7 +419,7 @@ int am_fp(void *p) {
      * have.
      */
     if ((am9511[I2] & 0x80) == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* Gather up sign, and exponent.
      */
@@ -431,34 +437,35 @@ int am_fp(void *p) {
      */
     e = e & 0x7f;
     if (e & 0x40) {
-	e = (e ^ 0x7f) + 1;
-	e = -e;
+        e = (e ^ 0x7f) + 1;
+        e = -e;
     }
     e -= 1;
 
     /* Fill in fp.
      */
-    fptmp.sign = s;
-    fptmp.exponent = e;
-    fptmp.mantissa_h = m_h;
-    fptmp.mantissa_l = m_l;
+    fptmp->sign = s;
+    fptmp->exponent = e;
+    fptmp->mantissa_h = m_h;
+    fptmp->mantissa_l = m_l;
 
     return FP_OK;
 }
 
 
-int fp_am(void *p) {
-    unsigned char *am9511 = p;
+int fp_am(void *fpp, void *p) {
+    unsigned char *am9511 = (unsigned char *)p;
+    struct fp *fptmp = (struct fp *)fpp;
     int16 e;
     uint16 m_l;
     uint8 m_h, s;
 
     /* Get from fp.
      */
-    e = fptmp.exponent;
-    m_l = fptmp.mantissa_l;
-    m_h = fptmp.mantissa_h;
-    s = fptmp.sign;
+    e = fptmp->exponent;
+    m_l = fptmp->mantissa_l;
+    m_h = fptmp->mantissa_h;
+    s = fptmp->sign;
 
     /* Clear destination.
      */
@@ -467,14 +474,14 @@ int fp_am(void *p) {
     /* If mantissa bit 23 is 0, result is 0.0.
      */
     if ((m_h & 0x80) == 0)
-	return FP_OK;
+        return FP_OK;
 
     /* Range check on exponent.
      */
     if (e < -64)
-	return FP_ERR;
+        return FP_ERR;
     if (e > 63)
-	return FP_ERR;
+        return FP_ERR;
     e += 1;
 
     /* Exponent to 7 bit (assumes 2's complement machine)
@@ -484,7 +491,7 @@ int fp_am(void *p) {
     /* Merge in sign to exponent.
      */
     if (s)
-	e |= 0x80;
+        e |= 0x80;
 
     /* Build up output.
      */
@@ -516,24 +523,33 @@ int fp_am(void *p) {
  * fp_put() is the way to do this. The reason for this madness is that
  * we want to get good code, and this may be run on the Z80.
  */
-void fp_get(unsigned char *sign,
-	    int *exponent,
-	    unsigned char *mantissa_h,
-	    unsigned int *mantissa_l) {
-    *sign = fptmp.sign;
-    *exponent = fptmp.exponent;
-    *mantissa_h = fptmp.mantissa_h;
-    *mantissa_l = fptmp.mantissa_l;
+void fp_get(void *fpp,
+	    unsigned char *sign,
+            int *exponent,
+            unsigned char *mantissa_h,
+            unsigned int *mantissa_l) {
+    struct fp *fptmp = (struct fp *)fpp;
+    *sign = fptmp->sign;
+    *exponent = fptmp->exponent;
+    *mantissa_h = fptmp->mantissa_h;
+    *mantissa_l = fptmp->mantissa_l;
 }
 
 /* Put into fp.
  */
-void fp_put(unsigned char sign,
-	    int exponent,
-	    unsigned char mantissa_h,
-	    unsigned int mantissa_l) {
-    fptmp.sign = sign;
-    fptmp.exponent = exponent;
-    fptmp.mantissa_h = mantissa_h;
-    fptmp.mantissa_l = mantissa_l;
+void fp_put(void *fpp,
+	    unsigned char sign,
+            int exponent,
+            unsigned char mantissa_h,
+            unsigned int mantissa_l) {
+    struct fp *fptmp = (struct fp *)fpp;
+    fptmp->sign = sign;
+    fptmp->exponent = exponent;
+    fptmp->mantissa_h = mantissa_h;
+    fptmp->mantissa_l = mantissa_l;
 }
+
+size_t fp_size(void) {
+    return sizeof (struct fp);
+}
+

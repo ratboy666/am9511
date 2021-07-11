@@ -33,21 +33,24 @@
 #define FP_OK   0 /* conversion ok */
 #define FP_ERR  1 /* conversion failed (won't fit in format) */
 
-int ie_fp(void *); /* ieee to fp */
-int fp_ie(void *); /* fp to ieee */
-int hi_fp(void *); /* hitech to fp */
-int fp_hi(void *); /* fp to hitech */
-int ms_fp(void *); /* microsoft to fp */
-int fp_ms(void *); /* fp to microsoft */
-int am_fp(void *); /* am9511 to fp */
-int fp_am(void *); /* fp to am9511*/
-void fp_get(unsigned char *sign,  /* get fptmp fields */
+int ie_fp(void *, void *); /* ieee to fp */
+int fp_ie(void *, void *); /* fp to ieee */
+int hi_fp(void *, void *); /* hitech to fp */
+int fp_hi(void *, void *); /* fp to hitech */
+int ms_fp(void *, void *); /* microsoft to fp */
+int fp_ms(void *, void *); /* fp to microsoft */
+int am_fp(void *, void *); /* am9511 to fp */
+int fp_am(void *, void *); /* fp to am9511*/
+void fp_get(void *,        /* get fp fields */
+	    unsigned char *sign,
 	    int *exponent,
 	    unsigned char *mantissa_h,
 	    unsigned int *mantissa_l);
-void fp_put(unsigned char sign,   /* set fptmp fields */
+void fp_put(void *,        /* set fp fields */
+	    unsigned char sign,
 	    int exponent,
 	    unsigned char mantissa_h,
 	    unsigned int mantissa_l);
+size_t fp_size(void);      /* size of struct fp */
 
 #endif

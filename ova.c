@@ -34,7 +34,7 @@ static unsigned char one[] = { 0x01, 0x00, 0x00, 0x00 };
  */
 int oadd16(unsigned char *pa,
            unsigned char *pb,
-	   unsigned char *pc) {
+           unsigned char *pc) {
     unsigned char sa, sb, sc;
     int overflow = 0;
 
@@ -42,9 +42,9 @@ int oadd16(unsigned char *pa,
     sb = pb[1] & 0x80;
     sc = pc[1] & 0x80;
     if ((sa == 0x00) && (sb == 0x00)  && (sc == 0x80))
-	overflow = 1;
+        overflow = 1;
     if ((sa == 0x80) && (sb == 0x80)  && (sc == 0x00))
-	overflow = 1;
+        overflow = 1;
     return overflow;
 }
 
@@ -53,7 +53,7 @@ int oadd16(unsigned char *pa,
  */
 int oadd32(unsigned char *pa,
            unsigned char *pb,
-	   unsigned char *pc) {
+           unsigned char *pc) {
     unsigned char sa, sb, sc;
     int overflow = 0;
 
@@ -61,9 +61,9 @@ int oadd32(unsigned char *pa,
     sb = pb[3] & 0x80;
     sc = pc[3] & 0x80;
     if ((sa == 0x00) && (sb == 0x00)  && (sc == 0x80))
-	overflow = 1;
+        overflow = 1;
     if ((sa == 0x80) && (sb == 0x80)  && (sc == 0x00))
-	overflow = 1;
+        overflow = 1;
     return overflow;
 }
 
@@ -72,7 +72,7 @@ int oadd32(unsigned char *pa,
  */
 int osub16(unsigned char *pa,
            unsigned char *pb,
-	   unsigned char *pc) {
+           unsigned char *pc) {
     unsigned char sa, sb, sc;
     int overflow = 0;
 
@@ -80,9 +80,9 @@ int osub16(unsigned char *pa,
     sb = pb[1] & 0x80;
     sc = pc[1] & 0x80;
     if ((sa == 0x00) && (sb == 0x80)  && (sc == 0x80))
-	overflow = 1;
+        overflow = 1;
     if ((sa == 0x80) && (sb == 0x00)  && (sc == 0x00))
-	overflow = 1;
+        overflow = 1;
     return overflow;
 }
 
@@ -141,7 +141,7 @@ int add32(unsigned char *pa,
     carry = add16(pa, pb, pc);
     if (!carry) {
         carry = add16(pah, pbh, pch);
-	return carry;
+        return carry;
     }
 
     carry = add16(one, pbh, pch);
@@ -167,7 +167,7 @@ static int add64(unsigned char *pa,
     carry = add32(pa, pb, pc);
     if (!carry) {
         carry = add32(pah, pbh, pch);
-	return carry;
+        return carry;
     }
 
     carry = add32(one, pbh, pch);
@@ -179,7 +179,7 @@ static int add64(unsigned char *pa,
 /* 16 bit 2's complement, return 1 if 0x8000
  */
 int cm16(unsigned char *pa,
-	 unsigned char *pb) {
+         unsigned char *pb) {
     uint16 a, b;
     int r = 0;
 
@@ -200,7 +200,7 @@ int cm16(unsigned char *pa,
 /* 32 bit 2's complement, return 1 if 0x80000000
  */
 int cm32(unsigned char *pa,
-	 unsigned char *pb) {
+         unsigned char *pb) {
     uint16 a, ah, b, bh;
     int r = 0;
 
@@ -209,12 +209,12 @@ int cm32(unsigned char *pa,
     if ((a == 0x0000) && (ah == 0x8000)) {
         b = a;
         bh = ah;
-	r = 1;
+        r = 1;
     } else {
         b = ~a;
-	bh = ~ah;
-	if (++b == 0)
-	    ++bh;
+        bh = ~ah;
+        if (++b == 0)
+            ++bh;
     }
     pb[0] = b;
     pb[1] = b >> 8;
@@ -236,7 +236,7 @@ int sub16(unsigned char *pa,
     b = pb[0] | (pb[1] << 8); 
     c = a - b;
     if (a == 0x8000)
-	carry = 1;
+        carry = 1;
     else
         carry = a < b;
     pc[0] = c;
@@ -248,8 +248,8 @@ int sub16(unsigned char *pa,
 /* 32 subtract. Return carry.
  */
 int sub32(unsigned char *pa,
-	  unsigned char *pb,
-	  unsigned char *pc) {
+          unsigned char *pb,
+          unsigned char *pc) {
     unsigned char *pah, *pbh, *pch;
     int carry, c2;
 
@@ -260,7 +260,7 @@ int sub32(unsigned char *pa,
     carry = sub16(pa, pb, pc);
     if (!carry) {
         carry = sub16(pah, pbh, pch);
-	return carry;
+        return carry;
     }
 
     carry = sub16(pah, one, pch);
@@ -329,7 +329,7 @@ static void mul16(unsigned char *m, unsigned char *n, unsigned char *r) {
     int i;
 
     for (i = 0; i < 4; ++i)
-	r2[i] = r3[i] = r[4] = 0;
+        r2[i] = r3[i] = r[4] = 0;
 
     /* r2:
      *
@@ -349,8 +349,8 @@ static void mul16(unsigned char *m, unsigned char *n, unsigned char *r) {
      * 0
      */
     carry = add16((unsigned char *)&mHigh_nLow,
-		  (unsigned char *)&mLow_nHigh,
-		  r3 + 1);
+                  (unsigned char *)&mLow_nHigh,
+                  r3 + 1);
 
     /* r4:
      *
@@ -377,12 +377,12 @@ static void mul16(unsigned char *m, unsigned char *n, unsigned char *r) {
  * (1 if high 16 is non-zero).
  */
 int mull16(unsigned char *pa,
-	   unsigned char *pb,
-	   unsigned char *pc) {
+           unsigned char *pb,
+           unsigned char *pc) {
     unsigned char r[4];
 
     if (((pa[0] == 0x00) && (pa[1] == 0x80)) ||
-	((pb[0] == 0x00) && (pb[1] == 0x80))) {
+        ((pb[0] == 0x00) && (pb[1] == 0x80))) {
         pc[0] = 0x00;
         pc[1] = 0x80;
         return 1;
@@ -400,12 +400,12 @@ int mull16(unsigned char *pa,
 /* 16 bit multiply, upper. Uses mul16(). returns overflow.
  */
 int mulu16(unsigned char *pa,
-	   unsigned char *pb,
-	   unsigned char *pc) {
+           unsigned char *pb,
+           unsigned char *pc) {
     unsigned char r[4];
 
     if (((pa[0] == 0x00) && (pa[1] == 0x80)) ||
-	((pb[0] == 0x00) && (pb[1] == 0x80))) {
+        ((pb[0] == 0x00) && (pb[1] == 0x80))) {
         pc[0] = 0x00;
         pc[1] = 0x80;
         return 1;
@@ -436,7 +436,7 @@ int div16(unsigned char *pa,
     b = pb[0] |
         (pb[1] << 8);
     if (b == 0) {
-	c = b;
+        c = b;
         r = 1;
     } else
         c = a / b;
@@ -458,16 +458,16 @@ int div32(unsigned char *pa,
     int r = 0;
 
     a = pa[0] |
-	(pa[1] << 8) |
-	(pa[2] << 16) |
-	(pa[3] << 24);
+        (pa[1] << 8) |
+        (pa[2] << 16) |
+        (pa[3] << 24);
     b = pb[0] |
-	(pb[1] << 8) |
-	(pb[2] << 16) |
-	(pb[3] << 24);
+        (pb[1] << 8) |
+        (pb[2] << 16) |
+        (pb[3] << 24);
     if (b == 0) {
-	c = b;
-	r = 1;
+        c = b;
+        r = 1;
     } else
         c = a / b;
     pc[0] = c & 0xff;
@@ -494,7 +494,7 @@ static void mul32(unsigned char *pa,
     int i;
 
     for (i = 0; i < 8; ++i)
-	pc[i] = r0[i] = r1[i] = r2[i] = r3[i] = 0;
+        pc[i] = r0[i] = r1[i] = r2[i] = r3[i] = 0;
 
     pal = pa;
     pah = pa + 2;
@@ -511,16 +511,13 @@ static void mul32(unsigned char *pa,
 }
 
 
-/* mull32 mulu32 needed. FIXME
- */
-
 int mull32(unsigned char *pa,
-	   unsigned char *pb,
-	   unsigned char *pc) {
+           unsigned char *pb,
+           unsigned char *pc) {
     unsigned char r[8];
 
     if (((pa[0]==0x00) && (pa[1]==0x00) && (pa[2]==0x00) && (pa[3]==0x80)) ||
-	((pb[0]==0x00) && (pb[1]==0x00) && (pa[2]==0x00) && (pa[3]==0x80))) {
+        ((pb[0]==0x00) && (pb[1]==0x00) && (pa[2]==0x00) && (pa[3]==0x80))) {
         pc[0] = 0x00;
         pc[1] = 0x00;
         pc[2] = 0x00;
@@ -540,12 +537,12 @@ int mull32(unsigned char *pa,
 
 
 int mulu32(unsigned char *pa,
-	   unsigned char *pb,
-	   unsigned char *pc) {
+           unsigned char *pb,
+           unsigned char *pc) {
     unsigned char r[8];
 
     if (((pa[0]==0x00) && (pa[1]==0x00) && (pa[2]==0x00) && (pa[3]==0x80)) ||
-	((pb[0]==0x00) && (pb[1]==0x00) && (pa[2]==0x00) && (pa[3]==0x80))) {
+        ((pb[0]==0x00) && (pb[1]==0x00) && (pa[2]==0x00) && (pa[3]==0x80))) {
         pc[0] = 0x00;
         pc[1] = 0x00;
         pc[2] = 0x00;
@@ -576,4 +573,3 @@ int mulu32(unsigned char *pa,
   16B,16B,16B,16B (64-bit product)
 
 */
-

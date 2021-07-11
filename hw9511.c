@@ -5,9 +5,17 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #ifdef z80
 #include <sys.h>
 #endif
+
+
+struct am9511 {
+    int status;
+    int data;
+};
+
 
 /* If we use the HI-TECH C functions inp() and outp() note that
  * they use Z80 instructions for i/o -- these are NOT supported
@@ -18,8 +26,6 @@
  * Zxcc (MBASIC does it this way).
  */
 #ifdef z80
-
-#if 1
 
 static char io_port;
 static char io_data;
@@ -50,8 +56,6 @@ mod2:
 #endasm
 }
 
-#endif
-
 #else
 
 #pragma GCC warning "inp and outp are dummy functions"
@@ -60,39 +64,32 @@ mod2:
 
 #endif
 
-/* Status and data ports. These can set by am_reset(), so just
- * choose some convenient values. These defaults are the "usual"
- * for a lot of AM9511 implementations.
- */
-static int status = 0x51;
-static int data   = 0x50;
-
 
 /* Push byte to am9511 stack
  */
-void am_push(unsigned char n) {
-    outp(data, n);
+void am_push(void *p, unsigned char n) {
+    outp(((struct am9511 *)p)->data, n);
 }
 
 
 /* Pop byte from am9511 stack
  */
-unsigned char am_pop(void) {
-    return inp(data);
+unsigned char am_pop(void *p) {
+    return inp(((struct am9511 *)p)->data);
 }
 
 
 /* Return am9511 status
  */
-unsigned char am_status(void) {
-    return inp(status);
+unsigned char am_status(void *p) {
+    return inp(((struct am9511 *)p)->status);
 }
 
 
 /* Send command to am9511
  */
-void am_command(unsigned char n) {
-    outp(status, n);
+void am_command(void *p, unsigned char n) {
+    outp(((struct am9511 *)p)->status, n);
 }
 
 
@@ -102,17 +99,31 @@ void am_command(unsigned char n) {
  * default value is set to match with the Zxcc and RunCPM
  * emulators.
  */
-void am_reset(int s, int d) {
-    if (s > 0)
-        status = s;
-    if (d > 0)
-        data = d;
+void am_reset(void *p) {
+    p = p;
 }
 
 
 /* Dump am9511 stack
  */
-void am_dump(unsigned char op) {
+void am_dump(void *p, unsigned char op) {
     op = op;
+    p = p;
 }
 
+
+/* Create AM9511 access structure
+ */
+void *am_create(int status, int data) {
+    struct am9511 *p;
+    p = malloc(sizeof (struct am9511));
+    if (p == NULL)
+	return NULL;
+    p->status = 0x51;
+    p->data = 0x50;
+    if (status >= 0)
+	p->status = status;
+    if (data >= 0)
+	p->data = data;
+    return p;
+}

@@ -42,7 +42,7 @@
 # set -v to display without expansion
 set -x
 
-if true; then
+if false; then
 
   # Build for gcc (emulation)
   #
@@ -82,18 +82,21 @@ if true; then
   #
   zxc cnvtest.c floatcnv.obj -LF
   #
+  rm test.obj
   zxc -c -o -DTEST1 -DTEST2 -DTEST3 -DTEST4 test.c
   zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
   cp test.com test14.com
   zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
   cp test.com testhw14.com
   #
+  rm test.obj
   zxc -c -o -DTEST5 -DTEST6 -DTEST7 -DTEST8 test.c
   zxc test.obj getopt.obj am9511.obj floatcnv.obj ova.obj -LF
   cp test.com test58.com
   zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
   cp test.com testhw58.com
   #
+  #rm test.obj
   zxc -c -o test.c
   zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
   cp test.com testhw.com

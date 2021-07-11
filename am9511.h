@@ -71,16 +71,17 @@
 #define AM_ERR_UND  0x04 /* underflow */
 #define AM_ERR_OVF  0x02 /* overflow */
 
-void          am_push(unsigned char);
-unsigned char am_pop(void);
-unsigned char am_status(void);
-void          am_command(unsigned char);
-void          am_reset(int status, int data);
+void         *am_create(int status, int data);
+void          am_push(void *, unsigned char);
+unsigned char am_pop(void *);
+unsigned char am_status(void *);
+void          am_command(void *, unsigned char);
+void          am_reset(void *);
 
 #ifdef NDEBUG
 #define am_dump(x)
 #else
-void am_dump(unsigned char);
+void am_dump(void *, unsigned char);
 #endif
 
 #endif

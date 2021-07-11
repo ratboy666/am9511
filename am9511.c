@@ -21,47 +21,58 @@
  *        na_fp() -- native to fp
  */
 #ifdef z80
-#define fp_na(x) fp_hi(x)
-#define na_fp(x) hi_fp(x)
+#define fp_na(x,y) fp_hi(x,y)
+#define na_fp(x,y) hi_fp(x,y)
 #else
-#define fp_na(x) fp_ie(x)
-#define na_fp(x) ie_fp(x)
+#define fp_na(x,y) fp_ie(x,y)
+#define na_fp(x,y) ie_fp(x,y)
 #endif
+
+/* Stack is 16 bytes long. sp is the stack pointer.
+ * Points to next location to use.
+ *
+ * AM9511 status and operator latch
+ */
+
+struct am_context {
+    unsigned char stack[16];
+    int sp;
+    void *fptmp;
+    unsigned char status;
+    unsigned char op_latch;
+#ifndef NDEBUG
+    unsigned char last_latch;
+#endif
+};
 
 
 #define AM_OP    0x1f
 
 
-/* Stack is 16 bytes long. sp is the stack pointer.
- * Points to next location to use.
- */
-static unsigned char stack[16] = { 0, };
-static int sp = 0;
-
-
 /* Add to sp
  */
-#define sp_add(n) ((sp + (n)) & 0xf)
+#define sp_add(n) ((ctx->sp + (n)) & 0xf)
 
 
 /* Return pointer into stack
  */
-#define stpos(offset) (stack + sp_add(offset))
+#define stpos(offset) (ctx->stack + sp_add(offset))
 
 
 /* Increment stack pointer
  */
-#define inc_sp(n) sp = sp_add(n)
+#define inc_sp(n) ctx->sp = sp_add(n)
 
 
 /* Decrement stack pointer
  */
-#define dec_sp(n) sp = sp_add(-(n))
+#define dec_sp(n) ctx->sp = sp_add(-(n))
 
 
 /* Push byte to am9511 stack
  */
-void am_push(unsigned char v) {
+void am_push(void *amp, unsigned char v) {
+    struct am_context *ctx = (struct am_context *)amp;
     *stpos(0) = v;
     inc_sp(1);
 }
@@ -69,29 +80,24 @@ void am_push(unsigned char v) {
 
 /* Pop byte from am9511 stack
  */
-unsigned char am_pop(void) {
+unsigned char am_pop(void *amp) {
+    struct am_context *ctx = (struct am_context *)amp;
     dec_sp(1);
     return *stpos(0);
 }
 
 
-/* AM9511 status and operator latch
- */
-static unsigned char status = 0;
-static unsigned char op_latch = 0;
-#ifndef NDEBUG
-static unsigned char last_latch = 0;
-#endif
 
 /* Return status of am9511
  */
-unsigned char am_status(void) {
-    return status;
+unsigned char am_status(void *amp) {
+    struct am_context *ctx = (struct am_context *)amp;
+    return ctx->status;
 }
 
 
-#define IS_SINGLE ((op_latch & AM_SINGLE) == AM_SINGLE)
-#define IS_FIXED (op_latch & AM_FIXED)
+#define IS_SINGLE ((ctx->op_latch & AM_SINGLE) == AM_SINGLE)
+#define IS_FIXED (ctx->op_latch & AM_FIXED)
 
 
 /* Set SIGN and ZERO according to op type and top of stack.
@@ -100,30 +106,30 @@ unsigned char am_status(void) {
  * The sign bit for all types is the top-most bit. If 1 then
  * negative.
  */
-static void sz(void) {
+static void sz(struct am_context *ctx) {
     if (IS_SINGLE) {
 	if ((*stpos(-1) | *stpos(-2)) == 0)
-	    status |= AM_ZERO;
+	    ctx->status |= AM_ZERO;
     } else if (IS_FIXED) {
 	if ((*stpos(-1) | *stpos(-2) | *stpos(-3) | *stpos(-4)) == 0)
-	    status |= AM_ZERO;
+	    ctx->status |= AM_ZERO;
     } else {
 	if ((*stpos(-2) & 0x80) == 0)
-	    status |= AM_ZERO;
+	    ctx->status |= AM_ZERO;
     }
     if (*stpos(-1) & 0x80)
-	status |= AM_SIGN;
+	ctx->status |= AM_SIGN;
 }
 
 
 /* PUPI
  */
-static void pupi(void) {
-    am_push(0xda); /* little end to big end */
-    am_push(0x0f);
-    am_push(0xc9);
-    am_push(0x02);
-    sz();
+static void pupi(struct am_context *ctx) {
+    am_push(ctx, 0xda); /* little end to big end */
+    am_push(ctx, 0x0f);
+    am_push(ctx, 0xc9);
+    am_push(ctx, 0x02);
+    sz(ctx);
 }
 
 
@@ -131,21 +137,21 @@ static void pupi(void) {
  *
  * This relies on the stack data not moving during a push.
  */
-static void pto(void) {
+static void pto(struct am_context *ctx) {
     unsigned char *s; 
 
     if (IS_SINGLE) {
         s = stpos(-2);
-	am_push(*s++);
-	am_push(*s);
+	am_push(ctx, *s++);
+	am_push(ctx, *s);
     } else {
         s = stpos(-4);
-        am_push(*s++);
-	am_push(*s++);
-	am_push(*s++);
-	am_push(*s);
+        am_push(ctx, *s++);
+	am_push(ctx, *s++);
+	am_push(ctx, *s++);
+	am_push(ctx, *s);
     }
-    sz();
+    sz(ctx);
 }
 
 
@@ -156,18 +162,18 @@ static void pto(void) {
  * new tos element really is! (in terms of type)
  * The guide states and SIGN and ZERO are affected, but no more than that.
  */
-static void pop(void) {
+static void pop(struct am_context *ctx) {
     if (IS_SINGLE)
     	dec_sp(2);
     else
     	dec_sp(4);
-    sz();
+    sz(ctx);
 }
 
 
 /* XCHS XCHD XCHF
  */
-static void xch(void) {
+static void xch(struct am_context *ctx) {
     unsigned char *s, *t, v;
 
     if (IS_SINGLE) {
@@ -183,154 +189,154 @@ static void xch(void) {
 	v = *t; *t++ = *s; *s++ = v;
 	v = *t; *t   = *s; *s   = v;
     }
-    sz();
+    sz(ctx);
 }
 
 
 /* CHSF
  */
-static void chsf(void) {
+static void chsf(struct am_context *ctx) {
     /* Floating point sign change - only flip sign
      * (if not zero). And, as with the AM9511 chip, CHSF
      * is even faster than CHSS.
      */
     if (*stpos(-2) & 0x80)
         *stpos(-1) ^= 0x80;
-    sz();
+    sz(ctx);
 }
 
 
 /* CHSS CHSD
  */
-static void chs(void) {
+static void chs(struct am_context *ctx) {
     if (IS_SINGLE) {
         if (cm16(stpos(-2), stpos(-2)))
-	    status |= AM_ERR_OVF;
+	    ctx->status |= AM_ERR_OVF;
     } else {
 	if (cm32(stpos(-4), stpos(-4)))
-	    status |= AM_ERR_OVF;
+	    ctx->status |= AM_ERR_OVF;
     }
-    sz();
+    sz(ctx);
 }
 
 
 /* Push float to stack, set SIGN and ZERO
  */
-static void push_float(float x) {
+static void push_float(struct am_context *ctx, float x) {
     unsigned char v[4];
 
-    na_fp(&x);
-    fp_am(v);
-    am_push(v[0]);
-    am_push(v[1]);
-    am_push(v[2]);
-    am_push(v[3]);
-    op_latch = AM_FLOAT;
-    sz();
+    na_fp(&x, ctx->fptmp);
+    fp_am(ctx->fptmp, v);
+    am_push(ctx, v[0]);
+    am_push(ctx, v[1]);
+    am_push(ctx, v[2]);
+    am_push(ctx, v[3]);
+    ctx->op_latch = AM_FLOAT;
+    sz(ctx);
 }
 
 
 /* FLTS
  */
-static void flts(void) {
+static void flts(struct am_context *ctx) {
     int n;
     float x;
 
-    n = am_pop();
-    n = (n << 8) | am_pop();
+    n = am_pop(ctx);
+    n = (n << 8) | am_pop(ctx);
     x = n;
-    push_float(x);
+    push_float(ctx, x);
 }
 
 
 /* FLTD
  */
-static void fltd(void) {
+static void fltd(struct am_context *ctx) {
     int32 n;
     float x;
     int b;
 
     /* HI-TECH C long shift bug
      */
-    b = am_pop();
+    b = am_pop(ctx);
     n = b;
 
     n = n << 8;
-    b = am_pop();
+    b = am_pop(ctx);
     n = n | b;
 
     n = n << 8;
-    b = am_pop();
+    b = am_pop(ctx);
     n = n | b;
 
     n = n << 8;
-    b = am_pop();
+    b = am_pop(ctx);
     n = n | b;
 
     x = n;
-    push_float(x);
+    push_float(ctx, x);
 }
 
 
 /* FIXS
  */
-static void fixs(void) {
+static void fixs(struct am_context *ctx) {
     float x;
     unsigned char *s;
     int n;
 
     s = stpos(-4);
-    am_fp(s);
-    fp_na(&x);
+    am_fp(s, ctx->fptmp);
+    fp_na(ctx->fptmp, &x);
     if ((x < -32768.0) || (x > 32767.0)) {
-	status |= AM_ERR_OVF;
-	sz();
+	ctx->status |= AM_ERR_OVF;
+	sz(ctx);
 	return;
     }
     dec_sp(4);
     n = (int)x;
-    am_push(n);
-    am_push(n >> 8);
-    op_latch = AM_SINGLE;
-    sz();
+    am_push(ctx, n);
+    am_push(ctx, n >> 8);
+    ctx->op_latch = AM_SINGLE;
+    sz(ctx);
 
 }
 
 
 /* FIXD
  */
-static void fixd(void) {
+static void fixd(struct am_context *ctx) {
     float x;
     unsigned char *s;
     int32 n;
     float xl, xh;
 
     s = stpos(-4);
-    am_fp(s);
-    fp_na(&x);
+    am_fp(s, ctx->fptmp);
+    fp_na(ctx->fptmp, &x);
     n = -2147483648;
     xl = (float)n;
     n = 2147483647;
     xh = (float)n;
     if ((x < xl) || (x > xh)) {
-	status |= AM_ERR_OVF;
-	sz();
+	ctx->status |= AM_ERR_OVF;
+	sz(ctx);
 	return;
     }
     dec_sp(4);
     n = (int32)x;
-    am_push(n);
-    am_push(n >> 8);
-    am_push(n >> 8);
-    am_push(n >> 8);
-    op_latch = AM_DOUBLE;
-    sz();
+    am_push(ctx, n);
+    am_push(ctx, n >> 8);
+    am_push(ctx, n >> 16);
+    am_push(ctx, n >> 24);
+    ctx->op_latch = AM_DOUBLE;
+    sz(ctx);
 }
 
 
 /* SADD DADD
  */
-void add(void) {
+static void add(struct am_context *ctx) {
     int carry;
     int overflow;
 
@@ -344,16 +350,16 @@ void add(void) {
 	dec_sp(4);
     }
     if (carry)
-	status |= AM_CARRY;
+	ctx->status |= AM_CARRY;
     if (overflow)
-	status |= AM_ERR_OVF;
-    sz();
+	ctx->status |= AM_ERR_OVF;
+    sz(ctx);
 }
 
 
 /* SSUB DSUB
  */
-void sub(void) {
+static void sub(struct am_context *ctx) {
     int carry;
     int overflow;
 
@@ -367,16 +373,16 @@ void sub(void) {
 	dec_sp(4);
     }
     if (carry)
-	status |= AM_CARRY;
+	ctx->status |= AM_CARRY;
     if (overflow)
-	status |= AM_ERR_OVF;
-    sz();
+	ctx->status |= AM_ERR_OVF;
+    sz(ctx);
 }
 
 
 /* MUL
  */
-static void mul(void) {
+static void mul(struct am_context *ctx) {
     int overflow;
 
     if (IS_SINGLE) {
@@ -387,14 +393,14 @@ static void mul(void) {
         dec_sp(4);
     }
     if (overflow)
-	status |= AM_ERR_OVF;
-    sz();
+	ctx->status |= AM_ERR_OVF;
+    sz(ctx);
 }
 
 
 /* MUU
  */
-static void muu(void) {
+static void muu(struct am_context *ctx) {
     int overflow;
 
     if (IS_SINGLE) {
@@ -405,14 +411,14 @@ static void muu(void) {
         dec_sp(4);
     }
     if (overflow)
-	status |= AM_ERR_OVF;
-    sz();
+	ctx->status |= AM_ERR_OVF;
+    sz(ctx);
 }
 
 
 /* DIV
  */
-static void divi(void) {
+static void divi(struct am_context *ctx) {
     int div0;
 
     if (IS_SINGLE) {
@@ -423,22 +429,22 @@ static void divi(void) {
         dec_sp(4);
     }
     if (div0)
-	status |= AM_ERR_DIV0;
-    sz();
+	ctx->status |= AM_ERR_DIV0;
+    sz(ctx);
 }
 
 
 /* Detect and report float overflow/underflow
  */
-static int fov(double r) {
+static int fov(struct am_context *ctx, double r) {
     int e;
 
     frexp(r, &e);
     if (e > 63) {
-	status |= AM_ERR_OVF;
+	ctx->status |= AM_ERR_OVF;
 	return 1;
     } else if (e < -64) {
-	status |= AM_ERR_UND;
+	ctx->status |= AM_ERR_UND;
 	return 1;
     }
     return 0;
@@ -452,21 +458,21 @@ static int fov(double r) {
  * by 128. So... that is what we do. Note that frexp() and ldexp()
  * should be implemented via bit operations, not arithmetic.
  */
-static void basicf(void) {
+static void basicf(struct am_context *ctx) {
     unsigned char *ap, *bp;
     float a, b, r;
     double m;
     int e;
  
     ap = stpos(-4);
-    am_fp(ap);
-    fp_na(&a);
+    am_fp(ap, ctx->fptmp);
+    fp_na(ctx->fptmp, &a);
 
     bp = stpos(-8);
-    am_fp(bp);
-    fp_na(&b);
+    am_fp(bp, ctx->fptmp);
+    fp_na(ctx->fptmp, &b);
 
-    switch (op_latch & AM_OP) {
+    switch (ctx->op_latch & AM_OP) {
     case AM_FADD:
         r = a + b;
 	break;
@@ -479,7 +485,7 @@ static void basicf(void) {
     case AM_FDIV:
 	if (a == 0.0) {
 	    r = b;
-	    status |= AM_ERR_DIV0;
+	    ctx->status |= AM_ERR_DIV0;
 	} else
             r = b / a;
 	break;
@@ -490,19 +496,19 @@ static void basicf(void) {
      */
     m = frexp(r, &e);
     if (e > 63) {
-	status |= AM_ERR_OVF;
+	ctx->status |= AM_ERR_OVF;
 	e -= 128;
 	r = ldexp(m, e);
     } else if (e < -64) {
-	status |= AM_ERR_UND;
+	ctx->status |= AM_ERR_UND;
 	e += 128;
 	r = ldexp(m, e);
     }
-    na_fp(&r);
-    fp_am(bp);
+    na_fp(&r, ctx->fptmp);
+    fp_am(ctx->fptmp, bp);
     dec_sp(4);
-    op_latch = AM_FLOAT;
-    sz();
+    ctx->op_latch = AM_FLOAT;
+    sz(ctx);
 }
 
 
@@ -513,20 +519,20 @@ static void basicf(void) {
  * that are in both. This explains the strange shenanigans with double
  * here.
  */
-static void ffunc(void) {
+static void ffunc(struct am_context *ctx) {
     unsigned char *ap;
     float a;
     double x;
 
     ap = stpos(-4);
-    am_fp(ap);
-    fp_na(&a);
+    am_fp(ap, ctx->fptmp);
+    fp_na(ctx->fptmp, &a);
 
     x = a;
-    switch (op_latch & AM_OP) {
+    switch (ctx->op_latch & AM_OP) {
     case AM_SQRT:
         if (a < 0.0) {
-	    status |= AM_ERR_NEG;
+	    ctx->status |= AM_ERR_NEG;
 	    goto err;
 	} else
             x = sqrt(x);
@@ -534,7 +540,7 @@ static void ffunc(void) {
     case AM_EXP:
         /* -1.0 x 2^5 .. 1.0 x 2^5 */
         if ((a < -32.0) || (a > 32.0)) {
-	    status |= AM_ERR_ARG;
+	    ctx->status |= AM_ERR_ARG;
 	    goto err;
 	} else
             x = exp(x);
@@ -553,28 +559,28 @@ static void ffunc(void) {
 	break;
     case AM_LN:
 	if (a < 0.0) {
-	    status |= AM_ERR_NEG;
+	    ctx->status |= AM_ERR_NEG;
 	    goto err;
 	}
 	x = log(x);
 	break;
     case AM_LOG:
 	if (a < 0.0) {
-	    status |= AM_ERR_NEG;
+	    ctx->status |= AM_ERR_NEG;
 	    goto err;
 	}
 	x = log10(x);
 	break;
     case AM_ASIN:
 	if ((a < -1.0) || (a > 1.0)) {
-	   status |= AM_ERR_ARG;
+	   ctx->status |= AM_ERR_ARG;
 	   goto err;
 	}
 	x = asin(x);
 	break;
     case AM_ACOS:
 	if ((a < -1.0) || (a > 1.0)) {
-	   status |= AM_ERR_ARG;
+	   ctx->status |= AM_ERR_ARG;
 	   goto err;
 	}
 	x = acos(x);
@@ -583,14 +589,14 @@ static void ffunc(void) {
 	x = atan(x);
 	break;
     }
-    if (fov(x))
+    if (fov(ctx, x))
 	goto err;
     a = x;
-    na_fp(&a);
-    fp_am(ap);
+    na_fp(&a, ctx->fptmp);
+    fp_am(ctx->fptmp, ap);
 err:
-    op_latch = AM_FLOAT;
-    sz();
+    ctx->op_latch = AM_FLOAT;
+    sz(ctx);
 }
 
 
@@ -598,7 +604,7 @@ err:
  *
  * B^A = EXP( A * LN(B) )
  */
-static void pwr(void) {
+static void pwr(struct am_context *ctx) {
     /* B^A = EXP( A * LN(B) ) */
     unsigned char *ap, *bp;
     float a, b;
@@ -606,17 +612,17 @@ static void pwr(void) {
 
     /* A */
     ap = stpos(-4);
-    am_fp(ap);
-    fp_na(&a);
+    am_fp(ap, ctx->fptmp);
+    fp_na(ctx->fptmp, &a);
 
     /* B */
     bp = stpos(-8);
-    am_fp(bp);
-    fp_na(&b);
+    am_fp(bp, ctx->fptmp);
+    fp_na(ctx->fptmp, &b);
 
     /* LN(B) */
     if (b < 0.0) {
-	status |= AM_ERR_NEG;
+	ctx->status |= AM_ERR_NEG;
 	goto err;
     }
     x = b;
@@ -627,110 +633,111 @@ static void pwr(void) {
 
     /* EXP( A * LN(B) ) */
     if ((x < -32.0) || (x > 32.0)) {
-        status |= AM_ERR_ARG;
+        ctx->status |= AM_ERR_ARG;
 	goto err;
     }
     x = exp(x);
 
-    if (fov(x))
+    if (fov(ctx, x))
         goto err;
 
     /* replace B with result */
     b = x;
-    na_fp(&b);
-    fp_am(bp);
+    na_fp(&b, ctx->fptmp);
+    fp_am(ctx->fptmp, bp);
 
     /* roll stack */
     dec_sp(4);
 err:
-    sz();
+    sz(ctx);
 }
 
 
 /* Issue am9511 command. Does not return until command
  * is complete.
  */
-void am_command(unsigned char op) {
+void am_command(void *amp, unsigned char op) {
+    struct am_context *ctx = (struct am_context *)amp;
 
-    op_latch = op;
+    ctx->op_latch = op;
 
 #ifndef NDEBUG
-    last_latch = op;
+    ctx->last_latch = op;
 #endif
 
-    status = AM_BUSY;
+    ctx->status = AM_BUSY;
 
-    switch (op_latch & AM_OP) {
+    switch (ctx->op_latch & AM_OP) {
 
     case AM_NOP:  /* no operation */
-	status = 0;
+	ctx->status = 0;
         break;
 
     case AM_PUPI: /* push pi */
-	pupi();
+	pupi(ctx);
 	break;
 
     case AM_CHS:  /* change sign */
-	chs();
+	chs(ctx);
 	break;
 
     case AM_CHSF: /* float change sign */
-	chsf();   /* per Wayne Hortensius */
+	chsf(ctx); /* per Wayne Hortensius */
 	break;
 
     case AM_POP:  /* pop */
-	pop();
+	pop(ctx);
         break;
 
     case AM_PTO:  /* push tos (copy) */
-	pto();
+	pto(ctx);
         break;
 
     case AM_XCH:  /* exchange tos and nos */
-	xch();
+	xch(ctx);
         break;
 
     case AM_FLTD: /* 32 bit to float */
-	fltd();
+	fltd(ctx);
         break;
 
     case AM_FLTS: /* 16 bit to float */
-	flts();
+	flts(ctx);
         break;
 
     case AM_FIXD: /* float to 32 bit */
-	fixd();
+	fixd(ctx);
         break;
 
     case AM_FIXS: /* float to 16 bit */
-	fixs();
+	fixs(ctx);
         break;
 
     case AM_ADD:  /* add */
-	add();
+	add(ctx);
 	break;
 
     case AM_SUB:  /* subtract nos-tos */
-	sub();
+	sub(ctx);
         break;
 
     case AM_MUL:  /* multiply, lower half */
-	mul();
+	mul(ctx);
         break;
 
     case AM_MUU:  /* multiply, upper half */
-	muu();
+	muu(ctx);
         break;
 
     case AM_DIV:  /* divide nos/tos */
-	divi();
+	divi(ctx);
         break;
 
     case AM_FADD: /* floating add */
     case AM_FSUB: /* floating subtract */
     case AM_FMUL: /* floating multiply */
     case AM_FDIV: /* floating divide */
-	basicf();
+	basicf(ctx);
         break;
 
     case AM_SQRT: /* square root */
@@ -743,47 +750,63 @@ void am_command(unsigned char op) {
     case AM_ASIN: /* inverse sine */
     case AM_ACOS: /* inverse cosine */
     case AM_ATAN: /* inverse tangent */
-	ffunc();
+	ffunc(ctx);
         break;
 
     case AM_PWR:  /* power nos^tos */
-	pwr();
+	pwr(ctx);
         break;
 
     default:
         break;
     }
 
-    status &= ~AM_BUSY;
+    ctx->status &= ~AM_BUSY;
 }
 
 
 /* Reset the am9511 emulator
  */
-void am_reset(int status, int data) {
+void am_reset(void *amp) {
+    struct am_context *ctx = (struct am_context *)amp;
     int i;
 
-    sp = 0;
-    status = 0;
-    op_latch = 0;
-    last_latch = 0;
+    ctx->sp = 0;
+    ctx->status = 0;
+    ctx->op_latch = 0;
+    ctx->last_latch = 0;
     for (i = 0; i < 16; ++i)
-	stack[i] = 0;
+	ctx->stack[i] = 0;
+}
+
+
+/* Create chip.
+ */
+void *am_create(int status, int data) {
+    struct am_context *p;
+    void *fpp;
+    fpp = malloc(fp_size());
+    if (fpp == NULL)
+	return NULL;
+    p = malloc(32);
+    if (p == NULL)
+	return NULL;
+    p->fptmp = fpp;
+    am_reset(p);
+    return (void *)p;
 }
 
 
 /* Dump stack A..H or A..D, format depends on arg (AM_SINGLE,
  * AM_DOUBLE, AM_FLOAT). Dump status and last op_latch.
  */
-void am_dump(unsigned char op) {
-#ifdef NDEBUG
-    op = op;
-#else
+void am_dump(void *amp, unsigned char op) {
+    struct am_context *ctx = (struct am_context *)amp;
     int i;
     int16 n;
     int32 nl;
     float x;
-    unsigned char t = status;
+    unsigned char t = ctx->status;
     int b;
     static char *opnames[] = {
         "NOP",  "SQRT", "SIN",  "COS",
@@ -796,7 +819,7 @@ void am_dump(unsigned char op) {
         "FLTD", "FLTS", "FIXD", "FIXS"
     };
 
-    printf("AM9511 STATUS: %02x ", status);
+    printf("AM9511 STATUS: %02x ", ctx->status);
         if (t & AM_BUSY)  printf("BUSY ");
         if (t & AM_SIGN)  printf("SIGN ");
         if (t & AM_ZERO)  printf("ZERO ");
@@ -811,15 +834,15 @@ void am_dump(unsigned char op) {
         if (t & AM_ERR_UND)   printf("UND");
         if (t & AM_ERR_OVF)   printf("OVF");
         printf("\n");
-    t = last_latch;
+    t = ctx->last_latch;
     printf("LAST COMMAND: ");
         if (t & AM_SR)                    printf("SR ");
         if ((t & AM_SINGLE) == AM_SINGLE) printf("SINGLE ");
         else if (t & AM_FIXED)            printf("DOUBLE ");
         else                              printf("FLOAT ");
         printf("%s\n", opnames[t & AM_OP]);
-    t = op_latch;
-    op_latch = op;
+    t = ctx->op_latch;
+    ctx->op_latch = op;
     printf("AM9511 STACK ");
     if (IS_SINGLE) {
 	printf("(SINGLE)\n");
@@ -872,12 +895,11 @@ void am_dump(unsigned char op) {
 #endif
 		printf("%ld\n", (long)nl);
 	    } else {
-		am_fp(stpos(-(i * 4) - 4));
-		fp_na(&x);
+		am_fp(stpos(-(i * 4) - 4), ctx->fptmp);
+		fp_na(ctx->fptmp, &x);
 		printf("%g\n", x);
 	    }
 	}
     }
-    op_latch = t;
-#endif
+    ctx->op_latch = t;
 }
