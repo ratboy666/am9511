@@ -18,8 +18,6 @@ chip implementation (future project).
 
 test.com/test14.com/test58.com  is a basic test of the emulator. These are also linked as testhw.com/testhw14.com
 and testhw58.com to go straight to hardware.
-test58.com works with gcc -- but fails with HI-TECH C. This is due to an error in the compiler. I am looking
-for a work-around now.
 
 testhw.com (14 and 58) is the same as test.com, but runs on the actual chip:
 
