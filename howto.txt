@@ -60,24 +60,29 @@ with
  * The interface is very simple -- if interrupts are not used.
  */
 
+void *am9511 = NULL;
 
 #define AM_STATUS 0x51
 #define AM_DATA   0x50
 
 unsigned int in(tstates,a,v) {
     unsigned int r = 0;
+    if (am9511 == NULL)
+        am9511 = am_create(AM_STATUS, AM_DATA);
     if (v == AM_DATA)
-        r = am_pop();
+        r = am_pop(am9511);
     else if (v == AM_STATUS)
-        r = am_status();
+        r = am_status(am9511);
     return r;
 }
 
 unsigned int out(tstates,a,v,a2) {
+    if (am9511 == NULL)
+        am9511 = am_create(AM_STATUS, AM_DATA);
     if (v == AM_DATA)
-        am_push(a);
+        am_push(am9511, a);
     else if (v == AM_STATUS)
-        am_command(a);
+        am_command(am_9511, a);
     return 0;
 }
 
@@ -127,15 +132,19 @@ replace with:
 #define AM_STATUS 0x51
 #define AM_DATA   0x50
 
+void *am9511 = NULL;
+
 void cpu_out(const uint32 Port, const uint32 Value) {
-if (Port == AM_DATA) am_push(Value);
-else if (Port == AM_STATUS) am_command(Value);
+if (am9511 == NULL) am9511 = am_create(AM_STATUS, AM_DATA);
+if (Port == AM_DATA) am_push(am9511, Value);
+else if (Port == AM_STATUS) am_command(am9511, Value);
 else    _Bios();
 }
 
 uint32 cpu_in(const uint32 Port) {
-if (Port == AM_DATA) return am_pop();
-else if (Port == AM_STATUS) return am_status();
+if (am9511 == NULL) am9511 = am_create(AM_STATUS, AM_DATA);
+if (Port == AM_DATA) return am_pop(am9511);
+else if (Port == AM_STATUS) return am_status(am9511);
         _Bdos();
         return(HIGH_REGISTER(AF));
 }
