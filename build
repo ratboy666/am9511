@@ -42,7 +42,7 @@
 # set -v to display without expansion
 set -x
 
-if false; then
+if true; then
 
   # Build for gcc (emulation)
   #

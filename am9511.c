@@ -788,7 +788,7 @@ void *am_create(int status, int data) {
     fpp = malloc(fp_size());
     if (fpp == NULL)
 	return NULL;
-    p = malloc(32);
+    p = malloc(sizeof (struct am_context));
     if (p == NULL)
 	return NULL;
     p->fptmp = fpp;
