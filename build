@@ -2,12 +2,6 @@
 #
 # Build am9511 emulator
 #
-# testhw.c is a dummy source file -- so we can use the HI-TECH C
-# driver to generate testhw.com easily. I cannot get zxlink to work
-# (probably my bad), and -oname is not setting the output name
-# for the c.com driver. So, we create 0 length testhw.c and compile
-# that to provide the needed name.
-#
 # For the hardware version, we do not need ova (integer overflow
 # math) or the am9511 front end or floating emulation. This is
 # all done by the am9511 chip, through hw9511. We *do* need floatcnv
@@ -30,7 +24,7 @@
 #       multiply and divide are. As are the 32 bit (double) operations.
 #
 # WHY:  The AM9511 can deliver a floating point divide in 165.9
-#       2Mhz 8080 cycles. 41 register instructions. Compare to LLLBASIC
+#       2Mhz 8080 cycles, or 41 register instructions. Compare to LLLBASIC
 #       at 13079.6 cycles, this is 78.8 times faster.
 #
 #       We are going to incorporate am9511 into RunCPM for testing.
@@ -53,8 +47,10 @@ if true; then
   echo building test
   gcc -O3 -I. -Wall -c hw9511.c
   gcc -O3 -I. -Wall -o test test.c getopt.c am9511.c floatcnv.c ova.c -lm
-  gcc -O3 -I. -Wall -DTEST1 -DTEST2 -DTEST3 -DTEST4 -o test14 test.c getopt.c am9511.c floatcnv.c ova.c -lm
-  gcc -O3 -I. -Wall -DTEST5 -DTEST6 -DTEST7 -DTEST8 -o test58 test.c getopt.c am9511.c floatcnv.c ova.c -lm
+  gcc -O3 -I. -Wall -DTEST1 -DTEST2 -DTEST3 -DTEST4 -o test14 \
+    test.c getopt.c am9511.c floatcnv.c ova.c -lm
+  gcc -O3 -I. -Wall -DTEST5 -DTEST6 -DTEST7 -DTEST8 -o test58 \
+    test.c getopt.c am9511.c floatcnv.c ova.c -lm
 
 fi
 
@@ -76,10 +72,6 @@ if true; then
   zxc -c -o floatcnv.c
   zxc -c -o ova.c
   #
-  ##rm testhw.c
-  ##touch testhw.c
-  ##zxc -c -o testhw.c
-  #
   zxc cnvtest.c floatcnv.obj -LF
   #
   rm test.obj
@@ -96,7 +88,7 @@ if true; then
   zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
   cp test.com testhw58.com
   #
-  #rm test.obj
+  rm test.obj
   zxc -c -o test.c
   zxc test.obj getopt.obj hw9511.obj floatcnv.obj -LF
   cp test.com testhw.com

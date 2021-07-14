@@ -517,11 +517,6 @@ int fp_am(void *fpp, void *p) {
  *     if (mantissa_h & 0x80) == 0, value is 0.0. This is because the
  *     high bit of the mantissa is explicit. This gives us a fast 0
  *     test.
- *
- * And, as an important note: the value of fptmp is not saved -- to make
- * this code re-entrant, fptmp must be saved and restored. fp_get() and
- * fp_put() is the way to do this. The reason for this madness is that
- * we want to get good code, and this may be run on the Z80.
  */
 void fp_get(void *fpp,
 	    unsigned char *sign,
@@ -549,6 +544,8 @@ void fp_put(void *fpp,
     fptmp->mantissa_l = mantissa_l;
 }
 
+/* Size of internal fp format.
+ */
 size_t fp_size(void) {
     return sizeof (struct fp);
 }

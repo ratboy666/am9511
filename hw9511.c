@@ -19,11 +19,15 @@ struct am9511 {
 
 /* If we use the HI-TECH C functions inp() and outp() note that
  * they use Z80 instructions for i/o -- these are NOT supported
- * by Zxcc (and maybe not be RunCPM).
+ * by Zxcc (and maybe not by RunCPM).
  *
  * So, we use HI-TECH C in-line assembler. Yes, this *is*
  * self-modifying code. But, doing the i/o this way works with
- * Zxcc (MBASIC does it this way).
+ * Zxcc.
+ *
+ * DO NOT OPTIMIZE WHEN COMPILING
+ *
+ * THIS IS NOT RE-ENTRANT. NEED TO FIX THAT LATER.
  */
 #ifdef z80
 

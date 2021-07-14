@@ -737,6 +737,133 @@ void am_test6(void *am9511) {
 
 #endif
 
+#ifdef TEST7
+
+/* Signed multiply SMUL SMUU DMUL DMUD
+ */
+void am_test7(void *am9511) {
+    int s, b;
+    int16 n;
+    int32 nl;
+    printf("am_test7\n");
+
+    am_wait(am9511);
+
+    /* SMUL 10 * 3 result in am_test6()
+     */
+    n = 3;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    n = 10;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    am_command(am9511, AM_MUU | AM_SINGLE);
+    s = am_wait(am9511);
+    n = am_pop(am9511);
+    n = (n << 8) | am_pop(am9511);
+    printf("SMUU: 10 * 3 = %d (0) status = %d (32)\n", n, s);
+
+    n = -3;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    n = -10;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    am_command(am9511, AM_MUL | AM_SINGLE);
+    s = am_wait(am9511);
+    n = am_pop(am9511);
+    n = (n << 8) | am_pop(am9511);
+    printf("SMUL: -10 * -3 = %d (30) status = %d (0)\n", n, s);
+ 
+    n = -3;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    n = -10;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    am_command(am9511, AM_MUU | AM_SINGLE);
+    s = am_wait(am9511);
+    n = am_pop(am9511);
+    n = (n << 8) | am_pop(am9511);
+    printf("SMUU: -10 * -3 = %d (0) status = %d (32)\n", n, s);
+
+    n = -3;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    n = 10;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    am_command(am9511, AM_MUL | AM_SINGLE);
+    s = am_wait(am9511);
+    n = am_pop(am9511);
+    n = (n << 8) | am_pop(am9511);
+    printf("SMUL: 10 * -3 = %d (-30) status = %d (64)\n", n, s);
+
+    n = -3;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    n = 10;
+    am_push(am9511, n);
+    am_push(am9511, n >> 8);
+    am_command(am9511, AM_MUU | AM_SINGLE);
+    s = am_wait(am9511);
+    n = am_pop(am9511);
+    n = (n << 8) | am_pop(am9511);
+    printf("SMUU: 10 * -3 = %d (-1) status = %d (64)\n", n, s);
+
+    /* Test DMUL / DMUU */
+
+    nl = 3;
+    am_push(am9511, nl);
+    am_push(am9511, nl >> 8);
+    am_push(am9511, nl >> 16);
+    am_push(am9511, nl >> 24);
+    nl = 10;
+    am_push(am9511, nl);
+    am_push(am9511, nl >> 8);
+    am_push(am9511, nl >> 16);
+    am_push(am9511, nl >> 24);
+    am_command(am9511, AM_MUU | AM_DOUBLE);
+    s = am_wait(am9511);
+    nl = am_pop(am9511);
+    b = am_pop(am9511);
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop(am9511);
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop(am9511);
+    nl = nl << 8;
+    nl = nl | b;
+    printf("DMUU: 10 * 3 = %ld (0) status = %d (32)\n", (long)nl, s);
+
+    nl = -3;
+    am_push(am9511, nl);
+    am_push(am9511, nl >> 8);
+    am_push(am9511, nl >> 16);
+    am_push(am9511, nl >> 24);
+    nl = -10;
+    am_push(am9511, nl);
+    am_push(am9511, nl >> 8);
+    am_push(am9511, nl >> 16);
+    am_push(am9511, nl >> 24);
+    am_command(am9511, AM_MUL | AM_DOUBLE);
+    s = am_wait(am9511);
+    nl = am_pop(am9511);
+    b = am_pop(am9511);
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop(am9511);
+    nl = nl << 8;
+    nl = nl | b;
+    b = am_pop(am9511);
+    nl = nl << 8;
+    nl = nl | b;
+    printf("DMUL: -10 * -3 = %ld (30) status = %d (0)\n", (long)nl, s);
+ 
+}
+
+#endif
 
 void am_test(void *am9511) {
 #ifdef TEST1
@@ -757,6 +884,9 @@ void am_test(void *am9511) {
 #endif
 #ifdef TEST6
     am_test6(am9511);
+#endif
+#ifdef TEST7
+    am_test7(am9511);
 #endif
 }
 
