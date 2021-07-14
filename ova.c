@@ -612,7 +612,7 @@ int mull32(unsigned char *pa,
 	a[2] = pa[2];
 	a[3] = pa[3];
     }
-    if (pb[1] & 0x80) {
+    if (pb[3] & 0x80) {
 	s ^= 1;
 	cm32(pb, b);
     } else {
@@ -664,7 +664,7 @@ int mulu32(unsigned char *pa,
 	a[2] = pa[2];
 	a[3] = pa[3];
     }
-    if (pb[1] & 0x80) {
+    if (pb[3] & 0x80) {
 	s ^= 1;
 	cm32(pb, b);
     } else {
@@ -683,7 +683,7 @@ int mulu32(unsigned char *pa,
     pc[0] = r[4];
     pc[1] = r[5];
     pc[2] = r[6];
-    pc[4] = r[7];
+    pc[3] = r[7];
 
     return o;
 }
