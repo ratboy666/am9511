@@ -932,7 +932,7 @@ void am_test9(void *am9511) {
     b = am_pop(am9511);
     nl = nl << 8;
     nl = nl | b;
-    printf("DMUL: 10 * -3 = %ld (30) status = %d (32)\n", (long)nl, s);
+    printf("DMUL: 10 * -3 = %ld (-30) status = %d (64)\n", (long)nl, s);
 
     nl = -3;
     am_push(am9511, nl);
