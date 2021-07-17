@@ -239,7 +239,7 @@ static void push_float(struct am_context *ctx, float x) {
 /* FLTS
  */
 static void flts(struct am_context *ctx) {
-    int n;
+    int16 n;
     float x;
 
     n = am_pop(ctx);
@@ -534,16 +534,16 @@ static void ffunc(struct am_context *ctx) {
         if (a < 0.0) {
 	    ctx->status |= AM_ERR_NEG;
 	    goto err;
-	} else
-            x = sqrt(x);
+	}
+        x = sqrt(x);
 	break;
     case AM_EXP:
         /* -1.0 x 2^5 .. 1.0 x 2^5 */
         if ((a < -32.0) || (a > 32.0)) {
 	    ctx->status |= AM_ERR_ARG;
 	    goto err;
-	} else
-            x = exp(x);
+	}
+        x = exp(x);
 	break;
     case AM_SIN:
 	x = sin(x);
@@ -552,10 +552,9 @@ static void ffunc(struct am_context *ctx) {
 	x = cos(x);
 	break;
     case AM_TAN:
-	/* 2^-12 */
-	if (a < (1.0 / 4096.0))
-	    goto err;
-        x = tan(x);
+	/* less than 2^-12 : return A as tan(A) */
+	if (a >= (1.0 / 4096.0))
+            x = tan(x);
 	break;
     case AM_LN:
 	if (a < 0.0) {

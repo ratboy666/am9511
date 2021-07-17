@@ -102,6 +102,10 @@ See AM9511.BAS for an MBASIC program that is the start of a test.
 As am9511 matures, additional instructions on incorporating into
 other emulators should be given. Not ready yet... so be careful.
 
+BUGS - planeta.com does not work with the Zxcc integrtion -- this
+is probably my fault in not understanding Zxcc. RunCPM should be
+used to run planeta.com
+
 
 Integrating into RunCPM
 =======================
@@ -125,12 +129,13 @@ Edit cpu.h:
 
 Add #include "am9511.h" at the top
 
-Find cpu_in and cpu_out (Functions needed by the soft CPU implementat) and
-replace with:
+Find cpu_in and cpu_out (Functions needed by the soft CPU implementation) and
+replace with: (Note port assignments 0x43 and 0x42 are for rc2014 / planeta.com
+compatibilty)
 
 /* AM9511 */
-#define AM_STATUS 0x51
-#define AM_DATA   0x50
+#define AM_STATUS 0x43
+#define AM_DATA   0x42
 
 void *am9511 = NULL;
 
@@ -153,5 +158,13 @@ Rebuild (make posix build). RunCPM should now include am9511 at ports 80
 and 81.
 
 For both Zxcc and RunCPM, MBASIC can be used with AM9511.BAS
+
+planeta.com can be used to test am9511 under RunCPM.
+
+https://github.com/feilipu/planets
+
+for the source code for planeta.com and planet32.com planeta.com is
+compiled with z88dk for AM9511A, planet32.com is compiled for ieee
+32 bit float.
 
 
