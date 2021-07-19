@@ -3,8 +3,8 @@ AM9511 floating point chip emulator. Includes a library to allow conversion of 3
 Microsoft, IEEE, Hi-Tech C formats are supported.
 
 This is designed to run both on a Z80, or on a generic sytem with gcc (or tcc). floatcnv works on both Z80 and hosting
-platforms. am9511.c has some issues with Z80, but is primarily to be integrated into emulation platforms. howto.txt
-has some instructions for integrating into Zxc and RunCPM.
+platforms. am9511 is primarily to be integrated into emulation platforms. howto.txt has some instructions for integrating
+into Zxc and RunCPM.
 
 Emulation of AM9511 is now feature complete -- can be integrated. NOTE - this is beta only. If integrated, or using
 live chip, AM9511.BAS is MBASIC test program that can drive both the emulator or the actual chip.
@@ -16,8 +16,8 @@ z8000, and even Apple 2 (6502) systems, providing 16 and 32 bit integer and 32 b
 with the native host floating point, I intend on providing alternate implementations that mirror the actual AM9511
 chip implementation (future project).
 
-test.com/test14.com/test58.com  is a basic test of the emulator. These are also linked as testhw.com/testhw14.com
-and testhw58.com to go straight to hardware.
+test.com/test14.com/test58.com/test912.com  is a basic test of the emulator. These are also linked as testhw.com/testhw14.com,
+testhw58.com and testhw912.com to go straight to hardware.
 
 testhw.com (14 and 58) is the same as test.com, but runs on the actual chip:
 
