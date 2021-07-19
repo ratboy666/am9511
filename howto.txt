@@ -1,6 +1,7 @@
 How to install
 
-am9511 is meant to be installed into an emulator.
+am9511 is meant to be installed into an emulator. Here, we integrate
+am9511 into Zxcc and RunCPM.
 
 
 Integrating into Zxcc
@@ -13,7 +14,7 @@ https://www.seasip.info/Unix/Zxcc/
 I use zxcc to cross compile HI-TECH C, and do "light testing".
 zxcc will run mbasic 
 
-: fred@tara bin $; mbasic
+: fred@tara bin $; zxcc mbasic
 BASIC-80 Rev. 5.21
 [CP/M Version]
 Copyright 1977-1981 (C) by Microsoft
@@ -58,12 +59,15 @@ with
 /* support AM9511
  *
  * The interface is very simple -- if interrupts are not used.
+ *
+ * Note the values for AM_STATUS and AM_DATA are to support
+ * rc2014 (planeta.com)
  */
 
 void *am9511 = NULL;
 
-#define AM_STATUS 0x51
-#define AM_DATA   0x50
+#define AM_STATUS 0x43
+#define AM_DATA   0x42
 
 unsigned int in(tstates,a,v) {
     unsigned int r = 0;
@@ -80,9 +84,9 @@ unsigned int out(tstates,a,v,a2) {
     if (am9511 == NULL)
         am9511 = am_create(AM_STATUS, AM_DATA);
     if (v == AM_DATA)
-        am_push(am9511, a);
+        am_push(am9511, a2);
     else if (v == AM_STATUS)
-        am_command(am_9511, a);
+        am_command(am_9511, a2);
     return 0;
 }
 
@@ -95,16 +99,30 @@ to the top of the file
 
 "make" and "make install"
 
-Now, zxcc should have the AM9511 emulator, as ports 80 and 81.
+Now, zxcc should have the AM9511 emulator, as ports 66 and 67.
 
 See AM9511.BAS for an MBASIC program that is the start of a test.
 
 As am9511 matures, additional instructions on incorporating into
 other emulators should be given. Not ready yet... so be careful.
 
-BUGS - planeta.com does not work with the Zxcc integrtion -- this
-is probably my fault in not understanding Zxcc. RunCPM should be
-used to run planeta.com
+Please note that there is an error in Zxcc -- in edops.h opcodes
+0xed 0x70 and 0xed 0x71 are wrong: replace with
+
+instr(0x70,8);
+   {unsigned char x;input(x);
+   store(hl,x);
+   }
+endinstr;
+
+instr(0x71,8);
+   {unsigned char x=fetch(hl);
+   tstates+=out(tstates,b,c,x);
+   }
+endinstr;
+
+Note that this has NO effect on running zxc, etc. Just using Zxcc
+as an emulator driving i/o devices like am9511.
 
 
 Integrating into RunCPM
@@ -154,12 +172,12 @@ else if (Port == AM_STATUS) return am_status(am9511);
         return(HIGH_REGISTER(AF));
 }
 
-Rebuild (make posix build). RunCPM should now include am9511 at ports 80
-and 81.
+Rebuild (make posix build). RunCPM should now include am9511 at ports 66
+and 67.
 
 For both Zxcc and RunCPM, MBASIC can be used with AM9511.BAS
 
-planeta.com can be used to test am9511 under RunCPM.
+planeta.com can be used to test am9511 under RunCPM or Zxcc.
 
 https://github.com/feilipu/planets
 
