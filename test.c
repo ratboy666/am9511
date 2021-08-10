@@ -1059,12 +1059,14 @@ int main(int ac, char **av) {
 
     s = -1;
     d = -1;
-    while ((ch = getopt(ac, av, "s:d:")) != EOF)
+    while ((ch = getopt(ac, av, "S:D:s:d:")) != EOF)
 	switch (ch) {
 	case 's':
+	case 'S':
 	    s = atoi(optarg);
 	    break;
 	case 'd':
+	case 'D':
 	    d = atoi(optarg);
 	    break;
 	case '?':
